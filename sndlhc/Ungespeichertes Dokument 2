@@ -1,0 +1,277 @@
+M.h = {}
+for i in range(12):
+        tmp = 'tmp'+str(options.runNumber)+'p'+str(i)
+        if tmp in os.listdir('.'):         ut.readHists(M.h,tmp)
+        else: print('file missing ',tmp)
+for m in monitorTasks:
+          monitorTasks[m].Plot(beamOnly=True)
+
+h = {}
+for i in range(12):
+        tmp = 'tmp4964p'+str(i)
+        if tmp in os.listdir('.'):         ut.readHists(h,tmp)
+        else: print('file missing ',tmp)
+
+
+def dummy():
+     for noiseCut in noiseCuts:
+       nc = 'T'+str(noiseCut)
+       h[nc+'XPosVeto_00']=allTracks.Clone(nc+'XPosVeto_00')
+       h[nc+'XPosVeto_00'].Add(h[nc+'PosVeto_00'],-1)
+       for l in ['0','1','00','11']:
+           h[nc+'Veto_ineff'+l] = h[nc+'PosVeto_'+l].Clone(nc+'Veto_ineff'+l)
+           h[nc+'Veto_ineff'+l].SetTitle('Veto inefficiency '+l+' noise cut='+str(noiseCut))
+           h[nc+'Veto_ineff'+l].SetMinimum(0)
+           h[nc+'Veto_ineff'+l].SetMaximum(1)
+       for ix in range(allTracks.GetNbinsX()):
+          for iy in range(allTracks.GetNbinsY()):
+              for l in ['0','1','00','11']:
+                 bc = allTracks.GetBinContent(ix,iy)
+                 if bc < 100:
+                    h[nc+'Veto_ineff'+l].SetBinContent(ix,iy,-1)
+                    h[nc+'Veto_ineff'+l].SetBinError(ix,iy,0)
+                 else:
+                    h[nc+'Veto_ineff'+l].SetBinContent(ix,iy,max(h[nc+'XPosVeto_'+l].GetBinContent(ix+1,iy+1)/bc, 2.7/bc))
+                    h[nc+'Veto_ineff'+l].SetBinError(ix,iy,h[nc+'XPosVeto_'+l].GetBinError(ix+1,iy+1)/bc)
+       ut.bookCanvas(h,nc+'VetoEff','',1800,1400,4,2)
+       tc = h[nc+'VetoEff'].cd(1)
+       h[nc+'PosVeto_0'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(2)
+       h[nc+'PosVeto_1'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(3)
+       h[nc+'PosVeto_11'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(5)
+       h[nc+'XPosVeto_0'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(6)
+       h[nc+'XPosVeto_1'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(7)
+       h[nc+'XPosVeto_11'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(8)
+       h[nc+'PosVeto_00'].Draw('colz')
+       ut.bookCanvas(h,nc+'VetoInEff','',1800,1400,2,2)
+       tc = h[nc+'VetoInEff'].cd(1)
+       tc.SetLogz(1)
+       h[nc+'Veto_ineff0'].Draw('colz')
+       tc = h[nc+'VetoInEff'].cd(2)
+       tc.SetLogz(1)
+       h[nc+'Veto_ineff1'].Draw('colz')
+       tc = h[nc+'VetoInEff'].cd(3)
+       tc.SetLogz(1)
+       h[nc+'Veto_ineff11'].Draw('colz')
+       tc = h[nc+'VetoInEff'].cd(4)
+       tc.SetLogz(1)
+       h[nc+'Veto_ineff00'].Draw('colz')
+# make some printout
+       Ntot = h[nc+'PosVeto_0'].Clone('Ntot')
+       Ntot.Add(h[nc+'XPosVeto_0'])
+       ineff0 =  h[nc+'XPosVeto_0'].GetEntries()/Ntot.GetEntries()
+       ineff1 = h[nc+'XPosVeto_1'].GetEntries()/Ntot.GetEntries()
+       ineffOR =  h[nc+'XPosVeto_11'].GetEntries()/Ntot.GetEntries()
+       ineffAND = 1.-h[nc+'PosVeto_11'].GetEntries()/Ntot.GetEntries()
+       region = [21,91,34,89]
+       xax = h[nc+'PosVeto_0'].GetXaxis()
+       yax = h[nc+'PosVeto_0'].GetYaxis()
+       Ntot_r = Ntot.Integral(region[0],region[1],region[2],region[3])
+       ineff0_r = h[nc+'XPosVeto_0'].Integral(region[0],region[1],region[2],region[3])/Ntot_r
+       ineff1_r = h[nc+'XPosVeto_1'].Integral(region[0],region[1],region[2],region[3])/Ntot_r
+       ineffOR_r =  h[nc+'XPosVeto_11'].Integral(region[0],region[1],region[2],region[3])/Ntot_r
+       ineffAND_r = 1.-h[nc+'PosVeto_11'].Integral(region[0],region[1],region[2],region[3])/Ntot_r
+       print('noise cut = ',noiseCut)
+       print('global inefficiency veto0: %5.2F%% veto1: %5.2F%% veto0AND1: %5.2F%% veto0OR1: %5.2F%%'%(
+        ineff0*100,ineff1*100,ineffAND*100,ineffOR*100))
+       print('region %5.2F < X < %5.2F and %5.2F < Y < %5.2F '%(xax.GetBinCenter(region[0]),
+          xax.GetBinCenter(region[1]),yax.GetBinCenter(region[1]),yax.GetBinCenter(region[1])))
+       print('veto0: %5.2F%% veto1: %5.2F%% veto0AND1: %5.2F%% veto0OR1: %5.2F%%'%( ineff0_r*100,ineff1_r*100,ineffAND_r*100,ineffOR_r*100))
+
+region = [21,91,34,89]
+noiseCut=10
+nc = 'T'+str(noiseCut)
+Ntot = h[nc+'PosVeto_0'].Clone('Ntot')
+Ntot.Add(h[nc+'XPosVeto_0'])
+print(Ntot.GetEntries())
+print(h[nc+'XPosVeto_0'].Integral(region[0],region[1],region[2],region[3]),h[nc+'XPosVeto_1'].Integral(region[0],region[1],region[2],region[3]))
+
+with prev
+8587718.0
+>>> print(h[nc+'XPosVeto_0'].Integral(region[0],region[1],region[2],region[3]),h[nc+'XPosVeto_1'].Integral(region[0],region[1],region[2],region[3]))
+6371.0 6313.0
+
+wo prev
+8584002.0
+>>> print(h[nc+'XPosVeto_0'].Integral(region[0],region[1],region[2],region[3]),h[nc+'XPosVeto_1'].Integral(region[0],region[1],region[2],region[3]))
+6348.0 6290.0
+
+
+INFO] --- Initialize with RunId  --- 0
+
+************************************************************* 
+     initialisation for run id 0
+************************************************************* 
+-I- FairRunTimeDB::InitContainer() FairBaseParSet
+-I- FairRunTimeDB::InitContainer() FairGeoParSet
+
+************************************************************* 
+     initialisation for run id 0
+************************************************************* 
+-I- FairRunTimeDB::InitContainer() FairBaseParSet
+-I- FairRunTimeDB::InitContainer() FairGeoParSet
+TTree::Bronch:0: RuntimeWarning: FairEventHeader cannot be split, resetting splitlevel to 0
+start  0 0 1000000
+--> run/event nr: 4964 0  0.00%
+no hits False 3000130 -41.84295986692172 32.98413533488744 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.0048684717306270615 0.002431864143689294
+no hits False 3000130 -41.84295986692172 32.98413533488744 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.0048684717306270615 0.002431864143689294
+no hits False 3000130 -41.84295986692172 32.98413533488744 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.0048684717306270615 0.002431864143689294
+no hits False 3000130 -41.84295986692172 32.98413533488744 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.0048684717306270615 0.002431864143689294
+--> run/event nr: 4964 10000  1.00%
+--> run/event nr: 4964 20000  2.00%
+no hits False 3024836 -40.38384348222876 42.41229551672723 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.011529767588173017 -0.010332862777208098
+no hits False 3024836 -40.38384348222876 42.41229551672723 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.011529767588173017 -0.010332862777208098
+no hits False 3024836 -40.38384348222876 42.41229551672723 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.011529767588173017 -0.010332862777208098
+no hits False 3024836 -40.38384348222876 42.41229551672723 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.011529767588173017 -0.010332862777208098
+no hits False 3025420 -17.293152267637822 29.669918947301717 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.01901933208178769 -0.019341064050123973
+no hits False 3025420 -17.293152267637822 29.669918947301717 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.01901933208178769 -0.019341064050123973
+no hits False 3025420 -17.293152267637822 29.669918947301717 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.01901933208178769 -0.019341064050123973
+--> run/event nr: 4964 30000  3.00%
+no hits False 3031274 -38.47964857973907 39.12368943941526 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.022641727715492773 -7.261568991469552e-05
+no hits False 3031274 -38.47964857973907 39.12368943941526 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.022641727715492773 -7.261568991469552e-05
+no hits False 3031274 -38.47964857973907 39.12368943941526 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.022641727715492773 -7.261568991469552e-05
+no hits False 3031274 -38.47964857973907 39.12368943941526 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.022641727715492773 -7.261568991469552e-05
+no hits False 3035309 -33.55318539663938 30.065407421192823 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.006418855411810517 -0.05353224123489976
+no hits False 3035309 -33.55318539663938 30.065407421192823 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.006418855411810517 -0.05353224123489976
+no hits False 3035309 -33.55318539663938 30.065407421192823 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.006418855411810517 -0.05353224123489976
+no hits False 3035309 -33.55318539663938 30.065407421192823 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.006418855411810517 -0.05353224123489976
+no hits False 3036883 -29.631237220495418 40.1586433026212 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00921551509492436 0.0018310793401619253
+no hits False 3036883 -29.631237220495418 40.1586433026212 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00921551509492436 0.0018310793401619253
+no hits False 3036883 -29.631237220495418 40.1586433026212 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00921551509492436 0.0018310793401619253
+no hits False 3036883 -29.631237220495418 40.1586433026212 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00921551509492436 0.0018310793401619253
+--> run/event nr: 4964 40000  4.00%
+--> run/event nr: 4964 50000  5.00%
+no hits False 3051750 -11.257494955211422 35.91406832960647 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.022126590856782237 -0.0039347542321576555
+no hits False 3051750 -11.257494955211422 35.91406832960647 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.022126590856782237 -0.0039347542321576555
+no hits False 3051750 -11.257494955211422 35.91406832960647 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.022126590856782237 -0.0039347542321576555
+no hits False 3051750 -11.257494955211422 35.91406832960647 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.022126590856782237 -0.0039347542321576555
+no hits False 3059366 -13.422678737994161 36.65707292205478 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0032331470857085193 0.010282270150553259
+no hits False 3059366 -13.422678737994161 36.65707292205478 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0032331470857085193 0.010282270150553259
+no hits False 3059366 -13.422678737994161 36.65707292205478 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0032331470857085193 0.010282270150553259
+no hits False 3059366 -13.422678737994161 36.65707292205478 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0032331470857085193 0.010282270150553259
+--> run/event nr: 4964 60000  6.00%
+--> run/event nr: 4964 70000  7.00%
+no hits False 3077894 -16.694323008912544 30.12685778482217 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.009592783935615141 0.004165781292231778
+no hits False 3077894 -16.694323008912544 30.12685778482217 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.009592783935615141 0.004165781292231778
+no hits False 3077894 -16.694323008912544 30.12685778482217 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.009592783935615141 0.004165781292231778
+no hits False 3077894 -16.694323008912544 30.12685778482217 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.009592783935615141 0.004165781292231778
+--> run/event nr: 4964 80000  8.00%
+no hits False 3085836 -38.28351870917481 43.75863902266989 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.008437627885985094 -0.0012523331568486849
+no hits False 3085836 -38.28351870917481 43.75863902266989 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.008437627885985094 -0.0012523331568486849
+no hits False 3085836 -38.28351870917481 43.75863902266989 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.008437627885985094 -0.0012523331568486849
+no hits False 3085836 -38.28351870917481 43.75863902266989 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.008437627885985094 -0.0012523331568486849
+--> run/event nr: 4964 90000  9.00%
+no hits False 3099207 -29.842081063226733 37.431081277521955 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00608425358010982 -0.0028709482230564903
+no hits False 3099207 -29.842081063226733 37.431081277521955 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00608425358010982 -0.0028709482230564903
+no hits False 3099207 -29.842081063226733 37.431081277521955 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00608425358010982 -0.0028709482230564903
+no hits False 3099207 -29.842081063226733 37.431081277521955 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00608425358010982 -0.0028709482230564903
+--> run/event nr: 4964 100000 10.00%
+no hits False 3101322 -44.10161152469381 30.775708711976904 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.001336758088011597 0.0012404104420799015
+no hits False 3101322 -44.10161152469381 30.775708711976904 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.001336758088011597 0.0012404104420799015
+no hits False 3101322 -44.10161152469381 30.775708711976904 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.001336758088011597 0.0012404104420799015
+no hits False 3101322 -44.10161152469381 30.775708711976904 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.001336758088011597 0.0012404104420799015
+no hits False 3102649 -44.24755901809898 41.92078795419307 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.01185747521904422 -0.016974389905956826
+no hits False 3102649 -44.24755901809898 41.92078795419307 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.01185747521904422 -0.016974389905956826
+no hits False 3102649 -44.24755901809898 41.92078795419307 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.01185747521904422 -0.016974389905956826
+no hits False 3102649 -44.24755901809898 41.92078795419307 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.01185747521904422 -0.016974389905956826
+--> run/event nr: 4964 110000 11.00%
+--> run/event nr: 4964 120000 12.00%
+--> run/event nr: 4964 130000 13.00%
+no hits False 3130298 -42.728826557779065 27.86249361797578 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.011029904597807 0.030692960171384585
+no hits False 3130298 -42.728826557779065 27.86249361797578 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.011029904597807 0.030692960171384585
+no hits False 3130298 -42.728826557779065 27.86249361797578 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.011029904597807 0.030692960171384585
+no hits False 3130298 -42.728826557779065 27.86249361797578 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.011029904597807 0.030692960171384585
+--> run/event nr: 4964 140000 14.00%
+no hits False 3141373 -36.76578783061684 43.83848205629736 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.017072860069529384 -0.017079623688525555
+no hits False 3141373 -36.76578783061684 43.83848205629736 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.017072860069529384 -0.017079623688525555
+no hits False 3141373 -36.76578783061684 43.83848205629736 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.017072860069529384 -0.017079623688525555
+no hits False 3141373 -36.76578783061684 43.83848205629736 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.017072860069529384 -0.017079623688525555
+no hits False 3141863 -37.594194640188405 52.98911050875727 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.01870404350645766 -0.022760600745908133
+no hits False 3141863 -37.594194640188405 52.98911050875727 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.01870404350645766 -0.022760600745908133
+--> run/event nr: 4964 150000 15.00%
+no hits False 3151305 -44.41604902498795 37.01568192710892 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.011918090318542922 0.0010005981430999179
+no hits False 3151305 -44.41604902498795 37.01568192710892 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.011918090318542922 0.0010005981430999179
+no hits False 3151305 -44.41604902498795 37.01568192710892 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.011918090318542922 0.0010005981430999179
+no hits False 3151305 -44.41604902498795 37.01568192710892 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.011918090318542922 0.0010005981430999179
+--> run/event nr: 4964 160000 16.00%
+no hits False 3161935 -34.35420778643068 33.845733102601876 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0028401213569209578 0.0007053628173750691
+no hits False 3161935 -34.35420778643068 33.845733102601876 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0028401213569209578 0.0007053628173750691
+no hits False 3161935 -34.35420778643068 33.845733102601876 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0028401213569209578 0.0007053628173750691
+no hits False 3161935 -34.35420778643068 33.845733102601876 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0028401213569209578 0.0007053628173750691
+no hits False 3163151 -12.246990534529875 52.657313365395716 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0020020922667912692 -0.001575237784732247
+no hits False 3163151 -12.246990534529875 52.657313365395716 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0020020922667912692 -0.001575237784732247
+no hits False 3163151 -12.246990534529875 52.657313365395716 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0020020922667912692 -0.001575237784732247
+no hits False 3163151 -12.246990534529875 52.657313365395716 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0020020922667912692 -0.001575237784732247
+no hits False 3165025 -33.89812365970884 44.05483047616556 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.010266262305456306 0.007348308041885882
+no hits False 3165025 -33.89812365970884 44.05483047616556 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.010266262305456306 0.007348308041885882
+no hits False 3165025 -33.89812365970884 44.05483047616556 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.010266262305456306 0.007348308041885882
+no hits False 3165025 -33.89812365970884 44.05483047616556 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.010266262305456306 0.007348308041885882
+no hits False 3167674 -37.55120752983867 42.77441508370597 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.006050810148324602 -0.05813404133926618
+no hits False 3167674 -37.55120752983867 42.77441508370597 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.006050810148324602 -0.05813404133926618
+no hits False 3167674 -37.55120752983867 42.77441508370597 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.006050810148324602 -0.05813404133926618
+no hits False 3167674 -37.55120752983867 42.77441508370597 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.006050810148324602 -0.05813404133926618
+--> run/event nr: 4964 170000 17.00%
+--> run/event nr: 4964 180000 18.00%
+--> run/event nr: 4964 190000 19.00%
+--> run/event nr: 4964 200000 20.00%
+no hits False 3203072 -18.585307698364982 49.075585999888744 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0005090311825786724 0.0009514743812869714
+no hits False 3203072 -18.585307698364982 49.075585999888744 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0005090311825786724 0.0009514743812869714
+no hits False 3203072 -18.585307698364982 49.075585999888744 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0005090311825786724 0.0009514743812869714
+no hits False 3203072 -18.585307698364982 49.075585999888744 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0005090311825786724 0.0009514743812869714
+no hits False 3207051 -36.114506046702694 44.14289454546855 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.025157522490037 0.001792681955246305
+no hits False 3207051 -36.114506046702694 44.14289454546855 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.025157522490037 0.001792681955246305
+no hits False 3207051 -36.114506046702694 44.14289454546855 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.025157522490037 0.001792681955246305
+no hits False 3207051 -36.114506046702694 44.14289454546855 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.025157522490037 0.001792681955246305
+--> run/event nr: 4964 210000 21.00%
+no hits False 3214306 -43.899277902963625 29.663147623718746 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.030535026854321547 0.008651873690544829
+no hits False 3214306 -43.899277902963625 29.663147623718746 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.030535026854321547 0.008651873690544829
+no hits False 3214306 -43.899277902963625 29.663147623718746 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.030535026854321547 0.008651873690544829
+no hits False 3214306 -43.899277902963625 29.663147623718746 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.030535026854321547 0.008651873690544829
+no hits False 3216834 -10.015234724505346 28.823007601169394 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0033103573348624883 -0.00196246920872396
+no hits False 3216834 -10.015234724505346 28.823007601169394 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0033103573348624883 -0.00196246920872396
+no hits False 3216834 -10.015234724505346 28.823007601169394 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0033103573348624883 -0.00196246920872396
+no hits False 3216834 -10.015234724505346 28.823007601169394 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0033103573348624883 -0.00196246920872396
+--> run/event nr: 4964 220000 22.00%
+--> run/event nr: 4964 230000 23.00%
+no hits False 3236746 -37.67882966545044 34.24899229996632 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.010476503567732227 -0.00690887350871371
+no hits False 3236746 -37.67882966545044 34.24899229996632 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.010476503567732227 -0.00690887350871371
+no hits False 3236746 -37.67882966545044 34.24899229996632 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.010476503567732227 -0.00690887350871371
+no hits False 3236746 -37.67882966545044 34.24899229996632 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.010476503567732227 -0.00690887350871371
+--> run/event nr: 4964 240000 24.00%
+no hits False 3241421 -28.248611747269333 38.630680588576034 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.005957559459502194 -0.002853675103038945
+no hits False 3241421 -28.248611747269333 38.630680588576034 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.005957559459502194 -0.002853675103038945
+no hits False 3241421 -28.248611747269333 38.630680588576034 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.005957559459502194 -0.002853675103038945
+no hits False 3241421 -28.248611747269333 38.630680588576034 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.005957559459502194 -0.002853675103038945
+--> run/event nr: 4964 250000 25.00%
+no hits False 3253172 -10.71596908790317 35.0256363414722 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0027791145142554824 -0.0034795837248278888
+no hits False 3253172 -10.71596908790317 35.0256363414722 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0027791145142554824 -0.0034795837248278888
+no hits False 3253172 -10.71596908790317 35.0256363414722 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0027791145142554824 -0.0034795837248278888
+no hits False 3253172 -10.71596908790317 35.0256363414722 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.0027791145142554824 -0.0034795837248278888
+no hits False 3253642 -37.25620885521799 47.071553380155734 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00667221863039749 -0.0014973585454011922
+no hits False 3253642 -37.25620885521799 47.071553380155734 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00667221863039749 -0.0014973585454011922
+no hits False 3253642 -37.25620885521799 47.071553380155734 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 0.00667221863039749 -0.0014973585454011922
+--> run/event nr: 4964 260000 26.00%
+no hits False 3263698 -14.813812775648694 40.840176858310905 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.006743056956386648 0.003672237213377311
+no hits False 3263698 -14.813812775648694 40.840176858310905 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.006743056956386648 0.003672237213377311
+no hits False 3263698 -14.813812775648694 40.840176858310905 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.006743056956386648 0.003672237213377311
+no hits False 3263698 -14.813812775648694 40.840176858310905 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.006743056956386648 0.003672237213377311
+--> run/event nr: 4964 270000 27.00%
+no hits False 3270006 -13.90836217998547 42.80624316996476 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.00299333605877848 -0.0027888252833583
+no hits False 3270006 -13.90836217998547 42.80624316996476 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.00299333605877848 -0.0027888252833583
+no hits False 3270006 -13.90836217998547 42.80624316996476 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.00299333605877848 -0.0027888252833583
+no hits False 3270006 -13.90836217998547 42.80624316996476 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.00299333605877848 -0.0027888252833583
+--> run/event nr: 4964 280000 28.00%
+no hits False 3285658 -17.02303109077921 52.93913136039325 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.009444112920852569 0.007484720607831532
+no hits False 3285658 -17.02303109077921 52.93913136039325 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.009444112920852569 0.007484720607831532
+no hits False 3285658 -17.02303109077921 52.93913136039325 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.009444112920852569 0.007484720607831532
+no hits False 3285658 -17.02303109077921 52.93913136039325 Name: TVector3 Title: A 3D physics vector Name: TVector3 Title: A 3D physics vector 282.40533494145876 -0.009444112920852569 0.007484720607831532
+--> run/event nr: 4964 290000 29.00%
+^Z
+
+
+
