@@ -104,9 +104,9 @@ A = ROOT.TVector3()
 B = ROOT.TVector3()
 C = ROOT.TVector3()
 D = ROOT.TVector3()
-def muonInter(pid=13,debug=False):
+def muonInter(pid=13,debug=False,i0=2,i1=6):
  eventTree = ROOT.TChain('cbmsim')
- for n in range(2,6): eventTree.Add('sndLHC.Ntuple-TGeant4_boost100'+str(n)+'.0_digCPP.root')
+ for n in range(i0,i1): eventTree.Add('sndLHC.Ntuple-TGeant4_boost100'+str(n)+'.0_digCPP.root')
  N=-1
  P = ROOT.TVector3()
  ut.bookHist(h,'cosAngle','cosAngle',100,0.99,1.0)
