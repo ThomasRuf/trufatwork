@@ -42,7 +42,6 @@ def goodEvent(event):
 
 
 emulsionReplacements = {0:1,4573:2,4859:3,5172:4}
-period = 2
 import ROOT
 import os,sys,subprocess
 import SndlhcGeo
@@ -57,21 +56,32 @@ emulsion[3] = [5408,5399,5396,5389,5382,5377,5373,5350]
 geoFiles[1] =  "geofile_sndlhc_TI18_V5_14August2022.root"
 geoFiles[2] =  "geofile_sndlhc_TI18_V6_08October2022.root"
 geoFiles[3] =  "geofile_sndlhc_TI18_V7_22November2022.root"
+emulsion[101] = ["sndLHC.Ntuple-TGeant4_boost101.0_digCPP.root"]   # MC boost factor 101
+geoFiles[101] = "geofile_full.Ntuple-TGeant4_boost101.0.root"
+emulsion[1001] = ["sndLHC.Ntuple-TGeant4_boost1001.0_digCPP.root"]   # MC boost factor 1001
+geoFiles[1001] = "geofile_full.Ntuple-TGeant4_boost1001.0.root"
 #
 from argparse import ArgumentParser
 parser = ArgumentParser()
 parser.add_argument("--server", dest="server", help="xrootd server",default=os.environ["EOSSHIP"])
 parser.add_argument("-p", "--path", dest="path", help="path to data",default="/eos/experiment/sndlhc/convertedData/commissioning/TI18/")
+parser.add_argument("-period", dest="period", help="period emulsion or MC",default=2,type=int)
 options = parser.parse_args()
+period = options.period
+
 snd_geo = SndlhcGeo.GeoInterface(options.server+options.path+geoFiles[period])
-options.path="/eos/experiment/sndlhc/convertedData/commissioning/TI18/"
-eventChain = ROOT.TChain('rawConv')
-for r in emulsion[period]:
-   dirlist  = str( subprocess.check_output("xrdfs "+options.server+" ls "+options.path+"run_"+str(r).zfill(6),shell=True) )
-   for x in dirlist.split('\\n'):
+if period <10:
+  eventChain = ROOT.TChain('rawConv')
+  for r in emulsion[period]:
+    dirlist  = str( subprocess.check_output("xrdfs "+options.server+" ls "+options.path+"run_"+str(r).zfill(6),shell=True) )
+    for x in dirlist.split('\\n'):
       ix = x.find('sndsw_raw-')
       if ix<0: continue
       eventChain.Add(options.server+options.path+'run_'+str(r).zfill(6)+'/'+x[ix:])
+else:
+  eventChain = ROOT.TChain('cbmsim')
+  for r in emulsion[period]:
+      eventChain.Add(options.server+options.path+r)
 
 eventTree = eventChain
 trackTask = SndlhcTracking.Tracking() 
@@ -80,8 +90,8 @@ trackTask.Init()
 trackTask.event = eventTree
 A= ROOT.TVector3()
 B= ROOT.TVector3()
-# for 3 tracks try with: ThreeTrackFinder(nstart=0,Nev=-1,sMin=10,dClMin=6,minDistance=0.5,debug=False)
-# for 2 tracks try with: ThreeTrackFinder(nstart=0,Nev=-1,ntrack=2,sMin=10,dClMin=6,minDistance=1.5,debug=False)
+# for 3 tracks try with: multiTrackFinder(nstart=0,Nev=-1,sMin=10,dClMin=6,minDistance=0.5,debug=False)
+# for 2 tracks try with: multiTrackFinder(nstart=0,Nev=-1,ntrack=2,sMin=10,dClMin=6,minDistance=1.5,debug=False)
 
 def multiTrackFinder(nstart=0,Nev=-1,ntrack=3,sMin=10,dClMin=6,minDistance=0.5,debug=False):
     # smin = 10: have hits in all 2*5 scifi planes
@@ -141,9 +151,20 @@ def multiTrackFinder(nstart=0,Nev=-1,ntrack=3,sMin=10,dClMin=6,minDistance=0.5,d
         if S[0]<2 or S[1]<2: continue  # no seed found
         print(ecounter,S[0],S[1], thirdBrick)
 
-eventList = [17175055,19300869,80135751,85424401,93683521,100822424,105590103,107532459,5823205,8086243,132359441,31924135]
+eventList = {}
+eventList['?'] = [17175055,19300869,80135751,85424401,93683521,100822424,105590103,107532459,5823205,8086243,132359441,31924135]
+eventList[101] = [17105,75498,78911,81952,92988,157310,179702,191244,246604,249961,263769,273781,286900,345050]
+eventList[1001] = [6472, 9789, 19373, 19523, 19576, 48825, 49050, 49790, 57052, 58114, 59020, 62999, 68183, 73752, 75237, 79585, 81392, 82690, 91727, 92465, 94300, 94961, 98123, 99532, 103323, 106940, 108414, 116558, 122835, 123592, 131933, 133277, 133482, 142698, 146664, 149819, 156938, 159718, 160726, 173136, 175961, 183386, 186674, 191120, 191179, 193227, 194053, 196052, 198436, 202028, 202484, 204194, 210153, 210621, 210707, 222379, 230330, 231250, 233268, 235153, 242281, 245666, 257368, 262071, 265819, 273375, 273684, 276857, 280377, 281309, 281562, 294695, 295016, 301022, 302055, 303203, 310132, 315826, 316670, 317046, 320022, 325755, 329052, 338379, 341934, 350081, 353268, 362001, 369672, 379246, 381855]
+
+
+def calcWeight(eventList):
+   w = 0
+   for i in eventList:
+     rc =  eventTree.GetEvent(i)
+     w+=eventTree.MCTrack[0].GetWeight()
+   return w
 import numpy
-def firstHits():
+def firstHits(eventList):
     for ecounter in eventList:
         rc = eventTree.GetEvent(ecounter)
         print('--->  event %10i   station       position '%(ecounter))

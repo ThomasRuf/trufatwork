@@ -4,6 +4,9 @@ import rootUtils as ut
 f = ROOT.TFile('run004705.root')
 ROOT.gROOT.cd()
 h={}
+S = {1:[1800,800,2,1],2:[1800,1500,2,3],3:[1800,1800,2,4]}
+channelsPerPlane = {1:7*16,3:60*2}
+Planes = {1:2,3:7}
 
 def start():
  for x in ['dTScifiDS','dTcorScifiDS']:
@@ -13,33 +16,35 @@ def start():
    h['mufi-'+x+d] = f.mufilter.Get(dd+'mufi-'+x+d).Clone('mufi-'+x+d)
    h['mufi-'+x+d].Draw()
    h['mufi-'+x+d].Print('mufi-'+x+d+'.png')
+   for pad in h['mufi-'+x+d].GetListOfPrimitives():
+      for y in pad.GetListOfPrimitives():
+        if not y.ClassName().find('TH')<0:
+           hname = y.GetName()
+           h[hname] = y.Clone(hname)
 
-def start0(p='tmp4705p9'):
+def start0(plist=['tmp4705p9'],s=3):
    detector = 'mufi-'
-   s=3
    wanted = []
-   for d in ['','B2noB1','B1only']:
-    for l in range(7):
-     tag = str(s)+str(l)+d
-     wanted.append(detector+'dT_'+tag)
-     wanted.append(detector+'dTA_'+tag)
-     wanted.append(detector+'dTB_'+tag)
-   ut.readHists(h,p,wanted=wanted)
-   S = {1:[1800,800,2,1],2:[1800,1500,2,3],3:[1800,1800,2,4]}
-   ut.bookCanvas(h,detector+'dTScifimufi','dt rel to scifi DS',S[s][0],S[s][1],S[s][2],S[s][3])
-   ut.bookCanvas(h,detector+'dTAScifimufi','dt rel to scifi DS',S[s][0],S[s][1],S[s][2],S[s][3])
-   ut.bookCanvas(h,detector+'dTBScifimufi','dt rel to scifi DS',S[s][0],S[s][1],S[s][2],S[s][3])
-   for l in range(7):
+   system = 'DS'
+   if s==1: system = 'Veto'
+   for x in ['','cor']:
+    for d in ['','B2noB1','B1only']:
+     ut.bookCanvas(h,detector+'dT'+x+'Scifi'+system+d,'dt rel to scifi '+system,S[s][0],S[s][1],S[s][2],S[s][3])
+     for l in range(7):
+      tag = str(10*s+l)+d
+      wanted.append(detector+'dT'+x+'_'+tag)
+   for p in plist:
+      ut.readHists(h,p,wanted=wanted)
+   for x in ['','cor']:
+    for d in ['','B2noB1','B1only']:
+     for l in range(S[s][2]*S[s][3]):
+              if s==3 and l>7: continue
               n = l+1
-              tag = str(s)+str(l)
+              tag = str(10*s+l)+d
               if s==3 and n==7: n=8
-              tc = h[detector+'dTScifimufi'].cd(n)
-              h[detector+'dT_'+tag].Draw('colz')
-              tc = h[detector+'dTAScifimufi'].cd(n)
-              h[detector+'dTA_'+tag].Draw('colz')
-              tc = h[detector+'dTBScifimufi'].cd(n)
-              h[detector+'dTB_'+tag].Draw('colz')
-   h[detector+'dTScifimufi'].Print('mufi-dTScifiDS.png')
+              tc = h[detector+'dT'+x+'Scifi'+system+d].cd(n)
+              h[detector+'dT'+x+'_'+tag].Draw('colz')
+     h[detector+'dT'+x+'Scifi'+system+d].Print('mufi-dT'+x+'Scifi'+system+d+'.png')
 
 def xCheck():
    ut.bookCanvas(h,'xCheckH',' ',1200,600,1,1)
@@ -51,7 +56,7 @@ def xCheck():
     tc = h['mufi-dTcorScifiDS'+b]
     h['meanAndSig'][b] = {}
     xmin,xmax = -5.,5.
-    if b=='B2noB1': xmin,xmax = -18.,-8.
+    if b=='B2noB1': xmin,xmax = -20.,-8.
     for pad in tc.GetListOfPrimitives():
       j+=1
       if j==7: j==8
@@ -105,46 +110,56 @@ par0={}
 alignTpar = {}
 alignTparB2 = {}
 
-def execute():
-  s=3
+def execute(s=3):
   detector = 'mufi-'
+  system = 'DS'
+  if s==1: system = 'Veto'
   ut.bookCanvas(h,'c1','',640,480,1,1)
   h['c1'].cd()
-  for l in range(7):
+  fitLimits ={1:[-15,-5],11:[-15,-5],3:[-10,-2],13:[-25,-15]}
+  for l in range(S[s][2]*S[s][3]):
+    if s==3 and l>7: continue
     tag = str(s*10+l)
     hist = h[detector+'dT_'+tag]
     alignTpar[s*10+l] = {}
     alignTparB2[s*10+l] = {}
     for i in range(hist.GetNbinsY()):
+        if s==1 and i > 8*16: continue
         tagi = str(i*1000+s*10+l)
         alignTpar[s*10+l][i] = [100,-100]
         h['tmp'+tagi] = hist.ProjectionX('tmp'+tagi,i+1,i+1)
         tmp = h['tmp'+tagi]
-        rc = tmp.Fit('gaus','SQ','',-10,-2)
+        rc = tmp.Fit('gaus','SQ','',fitLimits[s][0],fitLimits[s][1])
         fitres = rc.Get()
         if fitres:
              alignTpar[s*10+l][i]=[fitres.Parameter(1),fitres.Parameter(2)]
         alignTparB2[s*10+l][i] = [100,-100]
         tmp = h[detector+'dT_'+tag+'B2noB1'].ProjectionX('tmp',i+1,i+1)
-        rc = tmp.Fit('gaus','SQ','',-25,-15)
+        rc = tmp.Fit('gaus','SQ','',fitLimits[s+10][0],fitLimits[s+10][1])
         fitres = rc.Get()
         if fitres:
              alignTparB2[s*10+l][i]=[fitres.Parameter(1),fitres.Parameter(2)]
-  ut.bookHist(h,'talign','time alignment B1;channel;offset [ns]',7*120,-0.5,7*120-0.5)
-  ut.bookHist(h,'talign2','time alignment B2;channel;offset [ns]',7*120,-0.5,7*120-0.5)
-  ut.bookHist(h,'tres','time diff res;channel;sigma [ns]',7*120,-0.5,7*120-0.5)
-  ut.bookHist(h,'t12','time diff B1 B2;channel;sigma [ns]',7*120,-0.5,7*120-0.5)
-  for l in range(7):
+  nbins = channelsPerPlane[s] * Planes[s]
+  ut.bookHist(h,'talign','time alignment B1;channel;offset [ns]',nbins,-0.5,nbins-0.5)
+  ut.bookHist(h,'talign2','time alignment B2;channel;offset [ns]',nbins,-0.5,nbins-0.5)
+  ut.bookHist(h,'tres','time diff res;channel;sigma [ns]',nbins,-0.5,nbins-0.5)
+  ut.bookHist(h,'t12','time diff B1 B2;channel;sigma [ns]',nbins,-0.5,nbins-0.5)
+  for l in range(S[s][2]*S[s][3]):
+    if s==3 and l>7: continue
     for i in range(hist.GetNbinsY()):
-       k = l*120
+       k = l*channelsPerPlane[s]
        rc = h['talign'].Fill(k+i,alignTpar[s*10+l][i][0])
        rc = h['talign2'].Fill(k+i,alignTparB2[s*10+l][i][0])
        rc = h['tres'].Fill(k+i,abs(alignTpar[s*10+l][i][1]))
        if alignTpar[s*10+l][i][0]<99 and alignTparB2[s*10+l][i][0]<99:
            rc = h['t12'].Fill(k+i,alignTparB2[s*10+l][i][0]-alignTpar[s*10+l][i][0])
        else: rc = h['t12'].Fill(k+i,100)
-  h['talign'].SetMinimum(-10)
-  h['talign'].SetMaximum(1)
+  if s==3:
+     h['talign'].SetMinimum(-10)
+     h['talign'].SetMaximum(1)
+  else:
+     h['talign'].SetMinimum(-15)
+     h['talign'].SetMaximum(-5)
   h['talign2'].SetMinimum(-25)
   h['talign2'].SetMaximum(1)
   h['tres'].SetMinimum(0)
@@ -158,12 +173,12 @@ def execute():
   h['tres'].SetStats(0)
   h['talign'].SetStats(0)
   h['talign2'].SetStats(0)
-  ut.bookCanvas(h,'results','DS time alignment',2400,1200,1,2)
+  ut.bookCanvas(h,'results',system+' time alignment',2400,1200,1,2)
   tc = h['results'].cd(1)
   h['talign'].Draw('phist')
   tc = h['results'].cd(2)
   h['tres'].Draw('phist')
-  h['results'].Print('DStimeAlign-run004705.png')
+  h['results'].Print(system+'timeAlign-run004705.png')
   h['t12'].SetMinimum(-30)
   h['t12'].SetMaximum(0)
   h['t12'].SetStats(0)
@@ -173,13 +188,14 @@ def execute():
   ut.bookCanvas(h,'results2','time diff between FW and BW tracks',1200,600,1,1)
   h ['results2'].cd()
   h['t12'].Draw('phist')
-  h['results2'].Print('DStimeAlignFWBW-run004705.png')
+  h['results2'].Print(system+'timeAlignFWBW-run004705.png')
   
   for k in range(0,4):
     h['talignReorder'+str(k)] = h['talign'].Clone('talignReorder'+str(k))
     h['talignReorder'+str(k)].Reset()
-  slope = 0.082
-  for i in range(h['talign'].GetNbinsX()):
+  if s==3: 
+   slope = 0.0833
+   for i in range(h['talign'].GetNbinsX()):
      if i<120 and i%2==0: p=0
      elif i<120 and i%2==1: p=1
      elif i<240 and i%2==0: p=2
@@ -201,9 +217,9 @@ def execute():
      else: X-=(channel-30)*slope - 15*slope
      h['talignReorder2'].SetBinContent(j+1+p*60,X)
 
-  for l in range(0,3):
+   for l in range(0,3):
     c = 'talignReorder'+str(l)
-    ut.bookCanvas(h,'results'+c,'DS time alignment '+str(l),1200,600,1,1)
+    ut.bookCanvas(h,'results'+c,system+' time alignment '+str(l),1200,600,1,1)
     h['results'+c].SetGridy(1)
     h['results'+c].cd()
     par0[l]={}
@@ -243,45 +259,95 @@ def execute():
       print("%i slope %5.3F b = %5.2F"%(p,res.Parameter(1),res.Parameter(0)))
     h[c].GetXaxis().SetRange(1,600)
     h[c].Draw()
-    h['results'+c].Print('DStimeAlignFit'+str(l)+'-run004705.png')
+    h['results'+c].Print(sstem+'timeAlignFit'+str(l)+'-run004705.png')
     
-  c = 'talignReorder3'
-  ut.bookHist(h,'resT','t residuals',100,-3.,3.)
-  for i in range(h[c].GetNbinsX()):
+   c = 'talignReorder3'
+   ut.bookHist(h,'resT','t residuals',100,-3.,3.)
+   for i in range(h[c].GetNbinsX()):
      p = i//30
      if p<20:
          res = h[c.replace('3','2')].GetBinContent(i+1)-par0[2][p][0]
          h[c].SetBinContent(i+1,res)
          rc = h['resT'].Fill(res)
-  ut.bookCanvas(h,'results'+c,'DS time alignment 3',1200,600,1,1)
-  h['results'+c].SetGridy(1)
-  h['results'+c].cd()
-  h[c].GetXaxis().SetRange(1,600)
-  h[c].SetMinimum(-1)
-  h[c].SetMaximum(1)
-  h[c].Draw()
-  h['results'+c].Print('DStimeAlignFit3'+'-run004705.png')
-  h['c1'].cd()
-  rc = h['resT'].Fit('gaus','S','')
-  h['c1'].Update()
-  stats = h['resT'].FindObject('stats')
-  stats.SetOptFit(1)
-  stats.SetOptStat(1000000000)
-  stats.SetX1NDC(0.595611)
-  stats.SetY1NDC(0.614035)
-  stats.SetX2NDC(0.979624)
-  stats.SetY2NDC(0.936404)
-  h['c1'].Print('DStimeResiudals'+'-run004705.png')
+   ut.bookCanvas(h,'results'+c,system+' time alignment 3',1200,600,1,1)
+   h['results'+c].SetGridy(1)
+   h['results'+c].cd()
+   h[c].GetXaxis().SetRange(1,600)
+   h[c].SetMinimum(-1)
+   h[c].SetMaximum(1)
+   h[c].Draw()
+   h['results'+c].Print(system+'timeAlignFit3'+'-run004705.png')
+   h['c1'].cd()
+   rc = h['resT'].Fit('gaus','S','')
+   h['c1'].Update()
+   stats = h['resT'].FindObject('stats')
+   stats.SetOptFit(1)
+   stats.SetOptStat(1000000000)
+   stats.SetX1NDC(0.595611)
+   stats.SetY1NDC(0.614035)
+   stats.SetX2NDC(0.979624)
+   stats.SetY2NDC(0.936404)
+   h['c1'].Print(system+'timeResiudals'+'-run004705.png')
       
-  h['c1'].cd()
-  for I in [ [10.5,89.5],[249.5,328.5],[492.5,571.5] ]:
+   h['c1'].cd()
+   for I in [ [10.5,89.5],[249.5,328.5],[492.5,571.5] ]:
       p+=1
       rc = h['t12'].Fit('pol1','SQ','',I[0],I[1])
       res = rc.Get()
       print("%i delta t = %5.2F"%(p,res.Parameter(0)))
-  m=0
-  for i in par0[0]:
-   m+=abs(par0[0][i][1])
-  print('average slope = ',m/len(par0[0]))
+   m=0
+   for i in par0[0]:
+    m+=abs(par0[0][i][1])
+   print('average slope = ',m/len(par0[0]))
+  
+# golden nu event
+#  $EOSSHIP/eos/experiment/sndlhc/convertedData/physics/2022/run_005056/sndsw_raw-0101.root -g geofile_sndlhc_TI18_V7_22November2022.root
+#  849600
+def timingOfEvent(makeCluster=False,debug=False):
+   firstScifi_z = 300*u.cm
+   TDC2ns = 1E9/160.316E6
+   ut.bookHist(h,'evTimeDS','cor time of hits;[ns]',100,-20.,20)
+   ut.bookHist(h,'evTimeScifi','cor time of hits blue DS red Scifi;[ns]',100,-20.,20)
+   ut.bookCanvas(h,'tevTime','cor time of hits',1024,768,1,1)
+   h['evTimeScifi'].SetLineColor(ROOT.kRed)
+   h['evTimeDS'].SetLineColor(ROOT.kBlue)
+   h['evTimeScifi'].SetStats(0)
+   h['evTimeDS'].SetStats(0)
+   if makeCluster: trackTask.scifiCluster()
+   meanXY = {}
+   for siCl in trackTask.clusScifi:
+       detID = siCl.GetFirst()
+       s = detID//1000000
+       isVertical = detID%1000000//100000
+       siCl.GetPosition(A,B)
+       z=(A[2]+B[2])/2.
+       pos = (A[1]+B[1])/2.
+       L = abs(A[0]-B[0])/2.
+       if isVertical:
+          pos = (A[0]+B[0])/2.
+          L = abs(A[1]-B[1])/2.
+       corTime = geo.modules['Scifi'].GetCorrectedTime(detID, siCl.GetTime(), L) - (z-firstScifi_z)/u.speedOfLight
+       h['evTimeScifi'].Fill(corTime)
+       if debug: print(detID,corTime,pos)
+   for aHit in eventTree.Digi_MuFilterHits:
+       detID = aHit.GetDetectorID()
+       if not detID//10000==3: continue
+       if aHit.isVertical(): nmax = 1
+       else: nmax=2
+       geo.modules['MuFilter'].GetPosition(detID,A,B)
+       z=(A[2]+B[2])/2.
+       pos = (A[1]+B[1])/2.
+       L = abs(A[0]-B[0])/2.
+       if isVertical: 
+          pos = (A[0]+B[0])/2.
+          L = abs(A[1]-B[1])/2.
+       for i in range(nmax):
+            corTime = geo.modules['MuFilter'].GetCorrectedTime(detID, i, aHit.GetTime(i)*TDC2ns, L)- (z-firstScifi_z)/u.speedOfLight
+            h['evTimeDS'].Fill(corTime)
+            if debug: print(detID,i,corTime,pos)
+   tc=h['tevTime'].cd()
+   h['evTimeScifi'].Draw()
+   h['evTimeDS'].Draw('same')
+
 
 
