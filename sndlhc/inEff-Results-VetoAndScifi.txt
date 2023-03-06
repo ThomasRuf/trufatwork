@@ -1,0 +1,397 @@
+scifi.GetSiPMPosition(1000000,A,B)
+>>> (A[1]+B[1])/2
+14.964849051657234
+>>> scifi.GetSiPMPosition(1023127,A,B)
+>>> (A[1]+B[1])/2
+54.00431913184336
+
+scifi.GetSiPMPosition(1100000,A,B)
+>>> (A[0]+B[0])/2
+-46.21974599493218
+>>> scifi.GetSiPMPosition(1123127,A,B)
+>>> (A[0]+B[0])/2
+-7.146496817384938
+
+scifi = geo.modules['Scifi']
+border = []
+for s in [1]:
+  for p in [0,1]:
+     for m in [0,23127]:
+        scifi.GetSiPMPosition(s*1000000+100000*p+m,A,B)
+        border.append((A[(p+1)%2]+B[(p+1)%2])/2)
+
+border = [14.964849051657234, 54.00431913184336, -46.21974599493218, -7.146496817384938]
+h['TlineTop'+str(s)] = ROOT.TLine(border[2],border[1],border[3],border[1])
+h['TlineBot'+str(s)] = ROOT.TLine(border[2],border[0],border[3],border[0])
+h['TlineLef'+str(s)] = ROOT.TLine(border[2],border[0],border[2],border[1])
+h['TlineRig'+str(s)] = ROOT.TLine(border[3],border[0],border[3],border[1])
+
+
+border
+[14.964849051657234, 54.00431913184336, -46.21974599493218, -7.146496817384938]
+  ymin, ymax, xmin, xmax
+
+
+Veot inefficiency with all events
+
+noise cut =  1
+global inefficiency veto0:  5.30% veto1:  1.45% veto0AND1:  5.43% veto0OR1:  1.33%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.03% veto1:  0.03% veto0AND1:  0.04% veto0OR1:  0.02%
+noise cut =  5
+global inefficiency veto0:  5.37% veto1:  1.47% veto0AND1:  5.49% veto0OR1:  1.35%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.03% veto1:  0.03% veto0AND1:  0.04% veto0OR1:  0.02%
+noise cut =  10
+global inefficiency veto0:  5.42% veto1:  1.49% veto0AND1:  5.53% veto0OR1:  1.38%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.03% veto1:  0.04% veto0AND1:  0.05% veto0OR1:  0.02%
+noise cut =  12
+global inefficiency veto0:  5.65% veto1:  1.51% veto0AND1:  5.76% veto0OR1:  1.40%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.20% veto1:  0.04% veto0AND1:  0.21% veto0OR1:  0.02%
+
+
+veto inefficiency excluding events with a second event before, 100 clock cycles
+global inefficiency veto0:  5.31% veto1:  1.44% veto0AND1:  5.42% veto0OR1:  1.32%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.02% veto1:  0.02% veto0AND1:  0.02% veto0OR1:  0.02%
+noise cut =  5
+global inefficiency veto0:  5.37% veto1:  1.46% veto0AND1:  5.48% veto0OR1:  1.35%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.02% veto1:  0.02% veto0AND1:  0.02% veto0OR1:  0.02%
+noise cut =  10
+global inefficiency veto0:  5.42% veto1:  1.47% veto0AND1:  5.52% veto0OR1:  1.37%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.02% veto1:  0.02% veto0AND1:  0.03% veto0OR1:  0.02%
+noise cut =  12
+global inefficiency veto0:  5.65% veto1:  1.50% veto0AND1:  5.75% veto0OR1:  1.39%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.19% veto1:  0.03% veto0AND1:  0.19% veto0OR1:  0.02%
+
+
+--> run/event nr: 5119 full statistics
+noise cut =  1
+global inefficiency veto0:  5.37% veto1:  1.46% veto0AND1:  5.47% veto0OR1:  1.36%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.02% veto1:  0.02% veto0AND1:  0.03% veto0OR1:  0.02%
+noise cut =  5
+global inefficiency veto0:  5.42% veto1:  1.48% veto0AND1:  5.51% veto0OR1:  1.38%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.03% veto1:  0.03% veto0AND1:  0.03% veto0OR1:  0.02%
+noise cut =  10
+global inefficiency veto0:  5.47% veto1:  1.50% veto0AND1:  5.56% veto0OR1:  1.40%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.03% veto1:  0.03% veto0AND1:  0.04% veto0OR1:  0.02%
+noise cut =  12
+global inefficiency veto0:  5.70% veto1:  1.51% veto0AND1:  5.80% veto0OR1:  1.42%
+region -44.75 < X < -9.75 and 55.25 < Y < 55.25 
+veto0:  0.20% veto1:  0.03% veto0AND1:  0.21% veto0OR1:  0.02%
+
+
+
+
+with requiring veto hit matching with DS:
+average efficiency station:  1 -44.00<X<-8.00 16.00<Y<50.00 =  0.04%
+average efficiency station:  1 -40.00<X<-12.00 18.00<Y<47.00 =  0.02%
+ 
+average efficiency station:  2 -44.00<X<-8.00 16.00<Y<50.00 =  0.02%
+average efficiency station:  2 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+ 
+average efficiency station:  3 -44.00<X<-8.00 16.00<Y<50.00 =  0.01%
+average efficiency station:  3 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+ 
+average efficiency station:  4 -44.00<X<-8.00 16.00<Y<50.00 =  0.02%
+average efficiency station:  4 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+ 
+average efficiency station:  5 -44.00<X<-8.00 16.00<Y<50.00 =  0.08%
+average efficiency station:  5 -40.00<X<-12.00 18.00<Y<47.00 =  0.03%
+
+without Veto
+average efficiency station:  1 -44.00<X<-8.00 16.00<Y<50.00 =  0.10%
+average efficiency station:  1 -40.00<X<-12.00 18.00<Y<47.00 =  0.05%
+True
+average efficiency station:  2 -44.00<X<-8.00 16.00<Y<50.00 =  0.02%
+average efficiency station:  2 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+True
+average efficiency station:  3 -44.00<X<-8.00 16.00<Y<50.00 =  0.01%
+average efficiency station:  3 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+True
+average efficiency station:  4 -44.00<X<-8.00 16.00<Y<50.00 =  0.02%
+average efficiency station:  4 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+True
+average efficiency station:  5 -44.00<X<-8.00 16.00<Y<50.00 =  0.08%
+average efficiency station:  5 -40.00<X<-12.00 18.00<Y<47.00 =  0.03%
+
+many messages [ERROR] Scifi::GetSiPMPosition: non valid run number 0 ??
+file missing  tmp5119p3
+file missing  tmp5119p4
+file missing  tmp5119p9
+average efficiency: -44.00<X<-8.00 16.00<Y<50.00 = 78.05%
+average efficiency: -40.00<X<-12.00 18.00<Y<47.00 = 81.26%
+average efficiency station:  1 -44.00<X<-8.00 16.00<Y<50.00 =  0.02%
+average efficiency station:  1 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+average efficiency station:  2 -44.00<X<-8.00 16.00<Y<50.00 =  0.01%
+average efficiency station:  2 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+average efficiency station:  3 -44.00<X<-8.00 16.00<Y<50.00 =  0.01%
+average efficiency station:  3 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+average efficiency station:  4 -44.00<X<-8.00 16.00<Y<50.00 =  0.02%
+average efficiency station:  4 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+average efficiency station:  5 -44.00<X<-8.00 16.00<Y<50.00 =  0.04%
+average efficiency station:  5 -40.00<X<-12.00 18.00<Y<47.00 =  0.01%
+
+import ROOT
+rnr = ROOT.TRandom()
+succ = 0
+test = 0
+for n in range(10000):
+   hits = {0:0,1:0,2:0}
+   for i in range(7):
+      hits[ int(rnr.Rndm()*3)]+=1
+   if hits[0]==1 and hits[1]==3 and hits[2]==3: succ+=1
+   if hits[0]==2 and hits[1]==2 and hits[2]==3: test+=1
+   
+X Scifi  31  +: 12 -: 19 qdc : 20.6
+X    DS   4  +:  4 -:  0 qdc :240.8
+Y  Veto   0  +:  0 -:  0 qdcL:  0.0 qdcR:  0.0
+Y Scifi  13  +:  8 -:  5 qdc : 21.0
+Y    US   6  +: 64 -:  0 qdcL:581.6 qdcR:436.5
+Y    DS   4  +:  7 -:  0 qdcL: 93.6 qdcR: 88.2
+
+if 1:
+       ut.bookCanvas(h,'dxdy','',1200,1200,2,1)
+       tc = h['dxdy'].cd(1)
+       h['dx'].Draw()
+       tc = h['dxdy'].cd(2)
+       h['dy'].Draw()
+       #self.M.myPrint(h['dxdy'],'ScifiMufiPulls',subdir='scifi')
+       ut.bookCanvas(h,'scifiEff','',1600,800,3,1)
+       tc = h['scifiEff'].cd(1)
+       h['DStag'].Draw('colz')
+       tc = h['scifiEff'].cd(2)
+       h['scifiTrack'].Draw('colz')
+       h['eff']=h['scifiTrack'].Clone('eff')
+       h['eff'].Divide(h['DStag'])
+       tc = h['scifiEff'].cd(3)
+       h['eff'].DrawCopy('colz')
+       #self.M.myPrint(h['scifiEff'],'ScifiTrackEfficiency',subdir='scifi')
+       limits = {1:{'X':[-44,-8],'Y':[16,50]},2:{'X':[-40,-12],'Y':[18,47]}}
+       bins = {}
+       for l in limits :
+         bins[l] = []
+         for p in limits[l]:
+           for x in limits[l][p]:
+             bins[l].append(eval('h["DStag"].Get'+p+'axis().FindBin(x)'))
+         e = h['scifiTrack'].Integral(bins[l][0],bins[l][1],bins[l][2],bins[l][3])/h['DStag'].Integral(bins[l][0],bins[l][1],bins[l][2],bins[l][3])*100
+         print('average efficiency: %5.2F<X<%5.2F %5.2F<Y<%5.2F = %5.2F%%'%(limits[l]['X'][0],limits[l]['X'][1],limits[l]['Y'][0],limits[l]['Y'][1],e))
+       # station inefficiency
+       ut.bookCanvas(h,'Tsineff','',1200,900,3,2)
+       sRef=1
+       border = [14.964849051657234, 54.00431913184336, -46.21974599493218, -7.146496817384938]
+       h['TlineTop'+str(sRef)] = ROOT.TLine(border[2],border[1],border[3],border[1])
+       h['TlineBot'+str(sRef)] = ROOT.TLine(border[2],border[0],border[3],border[0])
+       h['TlineLef'+str(sRef)] = ROOT.TLine(border[2],border[0],border[2],border[1])
+       h['TlineRig'+str(sRef)] = ROOT.TLine(border[3],border[0],border[3],border[1])
+       for x in ['TlineTop'+str(sRef),'TlineBot'+str(sRef),'TlineLef'+str(sRef),'TlineRig'+str(sRef)]: 
+           h[x].SetLineWidth(3)
+           h[x].SetLineColor(ROOT.kRed)
+       for s in range(1,6):
+          tc = h['Tsineff'].cd(s)
+          tc.SetRightMargin(0.1)
+          tc.SetLogz(1)
+          h['sineff'+str(s)] = h['scifiTrack_'+str(s)].Clone('sineff'+str(s))
+          h['sineff'+str(s)].Divide(h['scifiTrack_0'])
+          h['sineff'+str(s)].SetStats(0)
+          h['sineff'+str(s)].SetMaximum(0.1)
+          h['sineff'+str(s)].DrawCopy('colz')
+          for x in ['TlineTop'+str(sRef),'TlineBot'+str(sRef),'TlineLef'+str(sRef),'TlineRig'+str(sRef)]: h[x].Draw('same')
+          tc.Update()
+          for l in limits :
+            e = h['scifiTrack_'+str(s)].Integral(bins[l][0],bins[l][1],bins[l][2],bins[l][3])/h['scifiTrack'].Integral(bins[l][0],bins[l][1],bins[l][2],bins[l][3])
+            print('average efficiency station: %2i %5.2F<X<%5.2F %5.2F<Y<%5.2F = %5.2G'%(s,limits[l]['X'][0],limits[l]['X'][1],limits[l]['Y'][0],limits[l]['Y'][1],e))
+
+if 1:
+  ut.bookCanvas(h,'s1','',1200,1200,1,1)
+  h['s1'].cd()
+  h['s1'].SetRightMargin(0.2)
+  h['sineff'+str(1)].DrawCopy('colz')
+  for x in ['TlineTop'+str(sRef),'TlineBot'+str(sRef),'TlineLef'+str(sRef),'TlineRig'+str(sRef)]: 
+    h[x].SetLineWidth(4)
+    h[x].Draw('same')
+  h['s1'].Print('ScifiStationIneff1_noVeto_run005120.png')
+
+       self.M.myPrint(h['Tsineff'],'ScifiStationInEfficiency',subdir='scifi')
+       ut.bookCanvas(h,'Tqdc','',1200,900,1,1)
+       tc = h['Tqdc'].cd()
+       h['USQDC'].Draw()
+       self.M.myPrint(h['Tqdc'],'US QDC for muon track',subdir='mufilter')
+
+3 mats, 3 sipm arrays, 128 channels 
+vertical channel number in [200, 1200]   
+horizontal channel number in [300, 1536]
+
+scifi.GetSiPMPosition(1101072,A,B)
+(A[0]+B[0])/2. -41.15
+scifi.GetSiPMPosition(1121048,A,B)
+>>> (A[0]+B[0])/2. -15.65
+
+scifi.GetSiPMPosition(1002044,A,B)
+>>> (A[1]+B[1])/2.  22.569120983728375
+
+-41.15<X<-15.65
+22.57<Y< ... 
+
+def execute():
+     b=''
+     noiseCuts = [1,5,10,12]
+     for c in ['','NoPrev']:
+      allTracks = h['T'+c+'1PosVeto_0'].Clone('tmp')
+      allTracks.Add(h['T'+c+'1XPosVeto_0'])
+      for noiseCut in noiseCuts:
+       nc = 'T'+c+str(noiseCut)+b
+       h[nc+'XPosVeto_00']=allTracks.Clone(nc+'XPosVeto_00')
+       h[nc+'XPosVeto_00'].Add(h[nc+'PosVeto_00'],-1)
+       for l in ['0','1','00','11']:
+           h[nc+'Veto_ineff'+l] = h[nc+'PosVeto_'+l].Clone(nc+'Veto_ineff'+l)
+           h[nc+'Veto_ineff'+l].SetTitle('Veto inefficiency '+l+' noise cut='+str(noiseCut))
+           h[nc+'Veto_ineff'+l].SetMinimum(0)
+           h[nc+'Veto_ineff'+l].SetMaximum(1)
+       for ix in range(allTracks.GetNbinsX()):
+          for iy in range(allTracks.GetNbinsY()):
+              for l in ['0','1','00','11']:
+                 bc = allTracks.GetBinContent(ix,iy)
+                 if bc < 100:
+                    h[nc+'Veto_ineff'+l].SetBinContent(ix,iy,-1)
+                    h[nc+'Veto_ineff'+l].SetBinError(ix,iy,0)
+                 else:
+                    h[nc+'Veto_ineff'+l].SetBinContent(ix,iy,max(h[nc+'XPosVeto_'+l].GetBinContent(ix+1,iy+1)/bc, 2.7/bc))
+                    h[nc+'Veto_ineff'+l].SetBinError(ix,iy,h[nc+'XPosVeto_'+l].GetBinError(ix+1,iy+1)/bc)
+       ut.bookCanvas(h,nc+'VetoEff','',1800,1400,4,2)
+       tc = h[nc+'VetoEff'].cd(1)
+       h[nc+'PosVeto_0'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(2)
+       h[nc+'PosVeto_1'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(3)
+       h[nc+'PosVeto_11'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(5)
+       h[nc+'XPosVeto_0'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(6)
+       h[nc+'XPosVeto_1'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(7)
+       h[nc+'XPosVeto_11'].Draw('colz')
+       tc = h[nc+'VetoEff'].cd(8)
+       h[nc+'PosVeto_00'].Draw('colz')
+       ut.bookCanvas(h,nc+'VetoInEff','',1800,1400,2,2)
+       tc = h[nc+'VetoInEff'].cd(1)
+       tc.SetLogz(1)
+       h[nc+'Veto_ineff0'].Draw('colz')
+       tc = h[nc+'VetoInEff'].cd(2)
+       tc.SetLogz(1)
+       h[nc+'Veto_ineff1'].Draw('colz')
+       tc = h[nc+'VetoInEff'].cd(3)
+       tc.SetLogz(1)
+       h[nc+'Veto_ineff11'].Draw('colz')
+       tc = h[nc+'VetoInEff'].cd(4)
+       tc.SetLogz(1)
+       h[nc+'Veto_ineff00'].Draw('colz')
+# make some printout
+       Ntot = h[nc+'PosVeto_0'].Clone('Ntot')
+       Ntot.Add(h[nc+'XPosVeto_0'])
+       ineff0 =  h[nc+'XPosVeto_0'].GetEntries()/Ntot.GetEntries()
+       ineff1 = h[nc+'XPosVeto_1'].GetEntries()/Ntot.GetEntries()
+       ineffOR =  h[nc+'XPosVeto_11'].GetEntries()/Ntot.GetEntries()
+       ineffAND = 1.-h[nc+'PosVeto_11'].GetEntries()/Ntot.GetEntries()
+       region = [21,91,34,89]
+       xax = h[nc+'PosVeto_0'].GetXaxis()
+       yax = h[nc+'PosVeto_0'].GetYaxis()
+       Ntot_r = Ntot.Integral(region[0],region[1],region[2],region[3])
+       ineff0_r = h[nc+'XPosVeto_0'].Integral(region[0],region[1],region[2],region[3])/Ntot_r
+       ineff1_r = h[nc+'XPosVeto_1'].Integral(region[0],region[1],region[2],region[3])/Ntot_r
+       ineffOR_r =  h[nc+'XPosVeto_11'].Integral(region[0],region[1],region[2],region[3])/Ntot_r
+       ineffAND_r = 1.-h[nc+'PosVeto_11'].Integral(region[0],region[1],region[2],region[3])/Ntot_r
+       print('noise cut = ',noiseCut, 'previous event:',c)
+       print('global inefficiency veto0: %5.2F%% veto1: %5.2F%% veto0AND1: %5.2F%% veto0OR1: %5.2F%%'%(
+        ineff0*100,ineff1*100,ineffAND*100,ineffOR*100))
+       print('region %5.2F < X < %5.2F and %5.2F < Y < %5.2F '%(xax.GetBinCenter(region[0]),
+          xax.GetBinCenter(region[1]),yax.GetBinCenter(region[0]),yax.GetBinCenter(region[1])))
+       print('veto0: %5.2F%% veto1: %5.2F%% veto0AND1: %5.2F%% veto0OR1: %5.2F%%'%( ineff0_r*100,ineff1_r*100,ineffAND_r*100,ineffOR_r*100))
+#
+
+ut.readHists(h,'/home/truf/ubuntu-1710/sndlhc-ubuntu2004-32/2022/tmp4964p0')
+h['USQDC'].SetStats(0)
+h['USQDC'].Draw()
+ut.makeIntegralDistrib(h,'USQDC')
+h['I-USQDC'].Scale(1/h['I-USQDC'].GetBinContent(1))
+h['I-USQDC'].SetStats(0)
+import ROOT
+c1 = ROOT.gROOT.FindObject('c1')
+c1.SetGrid()
+
+import rootUtils as ut
+import ROOT
+h={}
+ut.readHists(h,'allHistos-run005120.root')
+hMC = {}
+ut.readHists(hMC,'allHistos-run000000.root')
+for c in ['clSize','hitPerPlane','USQDC']:
+  ut.bookCanvas(h,'T'+c,'',1200,900,1,1)
+  tc = h['T'+c].cd()
+  h[c].Scale(1/h[c].GetSumOfWeights())
+  hMC[c].Scale(1/hMC[c].GetSumOfWeights())
+  h[c].SetLineColor(ROOT.kBlue)
+  hMC[c].SetLineColor(ROOT.kRed)
+  h[c].SetStats(0)
+  if c=='clSize': h[c].SetTitle('Scifi cluster size comparison')
+  if c=='hitPerPlane': tc.SetLogy(1)
+  else: tc.SetLogy(0)
+  hMC[c].SetStats(0)
+  h[c].Draw('hist')
+  hMC[c].Draw('histsame')
+  h['L'+c] = ROOT.TLegend(0.6,0.67,0.84,0.80)
+  rc = h['L'+c].AddEntry(h[c],'data: mean = %5.2F'%(h[c].GetMean()),"L")
+  rc = h['L'+c].AddEntry(hMC[c],'MC: mean = %5.2F'%(hMC[c].GetMean()),"L")
+  h['L'+c].Draw()
+  h['T'+c].Print('MCDataComparison-'+c+'.png')
+c='USQDC'
+shift = hMC[c].GetMean() - h[c].GetMean()
+if 1:
+ bshift = int(100/hMC[c].GetBinWidth(1)) # int(shift/hMC[c].GetBinWidth(1))
+ hMC[c+'shifted'] = hMC[c].Clone(c+'shifted')
+ hMC[c+'shifted'].Reset()
+ for k in range(1,hMC[c+'shifted'].GetNbinsX()-bshift):
+      hMC[c+'shifted'].SetBinContent(k,hMC[c].GetBinContent(k+bshift))
+ h[c].Draw('hist')
+ hMC[c+'shifted'].Draw('histsame')
+ h['L'+c+'shifted'] = ROOT.TLegend(0.6,0.67,0.84,0.80)
+ rc = h['L'+c+'shifted'].AddEntry(h[c],'data: mean = %5.2F'%(h[c].GetMean()),"L")
+ rc = h['L'+c+'shifted'].AddEntry(hMC[c+'shifted'],'MC shifted -%4.0FQDC: mean = %5.2F'%(bshift*hMC[c].GetBinWidth(1),hMC[c+'shifted'].GetMean()),"L")
+ h['L'+c+'shifted'].Draw()
+ h['T'+c].Print('MCDataComparison-'+c+'shifted.png')
+
+def convol(c):
+   ut.bookHist(h,'hitsIn4Planes','hits in 4 Planes',200,-0.5,199.5)
+   for n1 in range(50):
+     p1 = h[c].GetBinContent(n1+1)
+     for n2 in range(50):
+       p2 = h[c].GetBinContent(n2+1)
+       for n3 in range(50):
+         p3 = h[c].GetBinContent(n3+1)
+         for n4 in range(50):
+            p4 = h[c].GetBinContent(n4+1)
+            ptot = p1*p2*p3*p4
+            h['hitsIn4Planes'].Fill(n1+n2+n3+n4+1,ptot)
+      
+if 1:
+ c = 'hitPerPlane'
+ tc = h['T'+c]
+ convol(c)
+ c = 'hitsIn4Planes'
+ ut.makeIntegralDistrib(h,c)
+ h['I-'+c].SetLineWidth(2)
+ h['I-'+c].GetXaxis().SetRangeUser(-0.5,24.5)
+ h['I-'+c].Draw('hist')
+ h['I-'+c].SetStats(0)
+ tc.SetGrid()
+ tc.Print('Scifi_nHits4Detectors.png')
+ 
+

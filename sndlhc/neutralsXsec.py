@@ -101,6 +101,8 @@ for idp in idbeam:
       tname=PDG.GetParticle(t).GetName()
       gname = 'sigma vs p, '+name+'->'+target[t]
       h[gname]=ROOT.TGraph() 
+      cname = 'sigma charm vs p, '+name+'->'+target[t]
+      h[cname]=ROOT.TGraph() 
       step = (Erange[1]-Erange[0])/nEpoints
       charmContent[idp][t]={}
       for n in range(nEpoints):
@@ -122,6 +124,8 @@ for idp in idbeam:
          xsec = (tp.getPyint5_XSEC(2,0)-tp.getPyint5_XSEC(2,91)) * charmContent[idp][t][E]['muon']/nev
          print('%s->%s %5.1F, %5.2G'%(name,tname,E,xsec))
          h[gname].AddPoint(E,xsec)
+         xsec = (tp.getPyint5_XSEC(2,0)-tp.getPyint5_XSEC(2,91))
+         h[cname].AddPoint(E,xsec)
 
 # get inelastic cross section
 for idp in idbeam:
@@ -173,6 +177,11 @@ if 1:
       h['chi '+gname].SetLineColor(h[gname].GetLineColor())
       for n in range(h[gname].GetN()):
          h['chi '+gname].SetPoint(n,h[gname].GetPointX(n),h[gname].GetPointY(n)/sigma_inel[name])
+      gname = 'sigma charm vs p, '+name+'->'+target[t]
+      h['chi '+gname]=ROOT.TGraph()
+      h['chi '+gname].SetLineColor(h[gname].GetLineColor())
+      for n in range(h[gname].GetN()):
+         h['chi '+gname].SetPoint(n,h[gname].GetPointX(n),h[gname].GetPointY(n)/sigma_inel[name])
  ut.bookHist(h,'chi',';GeV;ccbar with muon / total',100,0.,Erange[1])
  h['chi'].SetMaximum(0.4/1000.)
  h['chi'].SetMinimum(0.0)
@@ -184,6 +193,18 @@ if 1:
  h['chi sigma vs p, Lambda0->p+'].Draw('same')
  h['chi sigma vs p, Lambda0->n0'].Draw('same')
  h['chi sigma vs p, n0->n0'].Draw('same')
+ 
+ ut.bookHist(h,'chi charm',';GeV;ccbar / total',100,0.,Erange[1])
+ h['chi charm'].SetMaximum(0.4/1000.)
+ h['chi charm'].SetMinimum(0.0)
+ h['chi charm'].SetStats(0)
+ h['chi charm'].Draw()
+ h['chi sigma charm vs p, n0->p+'].Draw('same')
+ h['chi sigma charm vs p, KL0->p+'].Draw('same')
+ h['chi sigma charm vs p, KL0->n0'].Draw('same')
+ h['chi sigma charm vs p, Lambda0->p+'].Draw('same')
+ h['chi sigma charm vs p, Lambda0->n0'].Draw('same')
+ h['chi sigma charm vs p, n0->n0'].Draw('same')
 
 neutralRates = {}
 neutralRatesG = {}

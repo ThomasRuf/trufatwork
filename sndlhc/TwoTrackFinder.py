@@ -2,6 +2,7 @@
 import ROOT,os,sys
 import rootUtils as ut
 import shipunit as u
+import statistics
 import ctypes
 from array import array
 
@@ -210,3 +211,53 @@ class TwoTrackReco(ROOT.FairTask):
            h[tname].cd(2)
            rc = h[detector+'trackPos'+x].Draw('colz')
            self.M.myPrint(self.M.h[tname],detector+'trackPos'+x,subdir='scifi')
+
+class searchForVx(ROOT.FairTask):
+   " find events with three tracks and vertex"
+   def Init(self,options,monitor):
+       self.M = monitor
+       h = self.M.h
+       self.projs = {1:'V',0:'H'}
+       self.trackTask = self.M.FairTasks['simpleTracking']
+       self.maxClusterPerPlane = 5
+       self.EventList = []
+   def ExecuteEvent(self,event):
+       h = self.M.h
+       W = self.M.Weight
+       sortedClusters={}
+       clusters = self.trackTask.clusScifi
+       for aCl in clusters:
+           so = aCl.GetFirst()//100000
+           if not so in sortedClusters: sortedClusters[so]=[]
+           sortedClusters[so].append(aCl)
+# select events with clusters in each plane
+       if len(sortedClusters)<10: return
+       nclMax = 0
+       for s in sortedClusters:
+           Y = len(sortedClusters[s])
+           if Y>nclMax: nclMax=Y
+       if nclMax > self.maxClusterPerPlane: return
+       if len(sortedClusters[50])<3 or  len(sortedClusters[51])<3 or  len(sortedClusters[40])<3 or  len(sortedClusters[41])<3: return
+       variances = {}
+       dist = {}
+       for s in sortedClusters:
+           dist[s]=[]
+           for x in sortedClusters[s]:
+              x.GetPosition(A,B)
+              if s%2==0: proj = 1
+              else: proj = 0
+              dist[s].append((A[proj]+B[proj])/2)
+           if len(dist[s])==0: variances[s]=0
+           else: variances[s]=statistics.pstdev(dist[s])
+       increase = {}
+       for o in range(2):
+          increase[o] = True
+          for s in range(1,5):
+             if s<3:
+               increase[o] = increase[o] and (variances[s*10+o] <= variances[(s+1)*10+o])
+             else:
+               increase[o] = increase[o] and (variances[s*10+o] < variances[(s+1)*10+o])
+       if increase[0] and increase[1]:
+              self.EventList.append([event.EventHeader.GetRunId(),event.EventHeader.GetEventNumber()])
+   def Plot(self):
+        print(self.EventList)

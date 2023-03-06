@@ -1,7 +1,10 @@
 import ROOT,os,sys
 import rootUtils as ut
 
-f = ROOT.TFile('run004705.root')
+# f = ROOT.TFile('run004705.root')
+# runNr = 4705
+f = ROOT.TFile.Open(os.environ['EOSSHIP']+'/eos/experiment/sndlhc/www/reprocessing/run005236.root')
+runNr = 5236
 ROOT.gROOT.cd()
 h={}
 S = {1:[1800,800,2,1],2:[1800,1500,2,3],3:[1800,1800,2,4]}
@@ -118,7 +121,7 @@ def execute(s=3):
   h['c1'].cd()
   fitLimits ={1:[-15,-5],11:[-15,-5],3:[-10,-2],13:[-25,-15]}
   for l in range(S[s][2]*S[s][3]):
-    if s==3 and l>7: continue
+    if s==3 and l>6: continue
     tag = str(s*10+l)
     hist = h[detector+'dT_'+tag]
     alignTpar[s*10+l] = {}
@@ -145,7 +148,7 @@ def execute(s=3):
   ut.bookHist(h,'tres','time diff res;channel;sigma [ns]',nbins,-0.5,nbins-0.5)
   ut.bookHist(h,'t12','time diff B1 B2;channel;sigma [ns]',nbins,-0.5,nbins-0.5)
   for l in range(S[s][2]*S[s][3]):
-    if s==3 and l>7: continue
+    if s==3 and l>6: continue
     for i in range(hist.GetNbinsY()):
        k = l*channelsPerPlane[s]
        rc = h['talign'].Fill(k+i,alignTpar[s*10+l][i][0])
@@ -228,14 +231,22 @@ def execute(s=3):
        par1 = 0
        planes = 20
        iv = 30
-       h[c].SetMinimum(-7)
-       h[c].SetMaximum(-4)
+       if runNr > 5200:
+         h[c].SetMinimum(-10)
+         h[c].SetMaximum(-9)
+       else:
+         h[c].SetMinimum(-7)
+         h[c].SetMaximum(-4)
     else: 
        par1 = slope
        planes = 20
        iv = 30
-       h[c].SetMinimum(-8)
-       h[c].SetMaximum(-3)
+       if runNr > 5200:
+         h[c].SetMinimum(-10)
+         h[c].SetMaximum(-4)
+       else:
+         h[c].SetMinimum(-8)
+         h[c].SetMaximum(-3)
     for p in range(planes):
       imin = 0.+p*iv
       imax = 0.+imin+iv
@@ -259,7 +270,7 @@ def execute(s=3):
       print("%i slope %5.3F b = %5.2F"%(p,res.Parameter(1),res.Parameter(0)))
     h[c].GetXaxis().SetRange(1,600)
     h[c].Draw()
-    h['results'+c].Print(sstem+'timeAlignFit'+str(l)+'-run004705.png')
+    h['results'+c].Print(system+'timeAlignFit'+str(l)+'-run004705.png')
     
    c = 'talignReorder3'
    ut.bookHist(h,'resT','t residuals',100,-3.,3.)

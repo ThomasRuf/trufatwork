@@ -53,6 +53,7 @@ parser.add_argument("--goodEvents", dest="goodEvents", action='store_true',defau
 parser.add_argument("--withTrack", dest="withTrack", action='store_true',default=False)
 parser.add_argument("--nTracks", dest="nTracks",default=0,type=int)
 parser.add_argument("--save", dest="save", action='store_true',default=False)
+parser.add_argument("--sH", dest="saveHistos", action='store_true',default=False,help="save all histos not only TCanvas")
 parser.add_argument("--interactive", dest="interactive", action='store_true',default=False)
 
 parser.add_argument("--parallel", dest="parallel",default=1,type=int)
@@ -73,15 +74,18 @@ if options.runNumber < 0  and not options.geoFile:
      exit()
 #RUN0: 7 Apr 2022 - 26 Jul 2022   (Run 4575 started -  test run after replacing emulsions -Ettore)
 #RUN1: 26 Jul 2022 - 13 Sept 2022 (Run 4855 September 14)
-#RUN2: 13 Sept 2022 -
+#RUN2: 13 Sept 2022 - 4 Nov 2022 (Run 5172 test run after emulsion replacement)
+#RUN3: 4 Nov 2022  -  
 
 if not options.geoFile:
      if options.runNumber < 4575:
            options.geoFile =  "geofile_sndlhc_TI18_V3_08August2022.root"
      elif options.runNumber < 4855:
           options.geoFile =  "geofile_sndlhc_TI18_V5_14August2022.root"
-     else:
+     elif options.runNumber < 5172:
           options.geoFile =  "geofile_sndlhc_TI18_V6_08October2022.root"
+     else:
+          options.geoFile =  "geofile_sndlhc_TI18_V7_22November2022.root"
 
 # to be extended for future new alignments.
 
@@ -127,7 +131,11 @@ else:
        os._exit(1)
 # works only for runs on EOS
    if not options.server.find('eos')<0:
-      runDir = "/eos/experiment/sndlhc/raw_data/commissioning/TI18/data/run_"+str(options.runNumber).zfill(6)
+      if options.path.find('2022'):
+          rawDataPath = "/eos/experiment/sndlhc/raw_data/physics/2022/"
+      else:
+          rawDataPath = "/eos/experiment/sndlhc/raw_data/commissioning/TI18/data/"
+      runDir = rawDataPath+"run_"+str(options.runNumber).zfill(6)
       jname = "run_timestamps.json"
       dirlist  = str( subprocess.check_output("xrdfs "+os.environ['EOSSHIP']+" ls "+runDir,shell=True) ) 
       if jname in dirlist:
@@ -154,22 +162,12 @@ else:
 
 M = Monitor.Monitoring(options,FairTasks)
 if options.nEvents < 0 :   options.nEvents = M.GetEntries()
-if options.postScale==0 and options.nEvents>5E7: options.postScale = 100
-if options.postScale==0 and options.nEvents>5E6: options.postScale = 10
+if options.postScale==0 and options.nEvents>100E6: options.postScale = 100
+if options.postScale==0 and options.nEvents>10E6: options.postScale = 10
 
 monitorTasks = {}
-
-#if not options.fname:
-#   monitorTasks['daq']     = DAQ_monitoring.DAQ_boards()
-#   monitorTasks['rates']   = DAQ_monitoring.Time_evolution()
-#monitorTasks['Scifi_hitMaps']   = Scifi_monitoring.Scifi_hitMaps()
-#monitorTasks['Mufi_hitMaps']   = Mufi_monitoring.Mufi_hitMaps()
-#monitorTasks['Mufi_QDCcorellations']   = Mufi_monitoring.Mufi_largeVSsmall()
-#monitorTasks['Scifi_residuals'] = Scifi_monitoring.Scifi_residuals()   # time consuming
-#if options.interactive:  monitorTasks['EventDisplay']   = EventDisplay_Task.twod()
-
-#monitorTasks['Veto_Efficiency']   = Mufi_monitoring.Veto_Efficiency()
-monitorTasks['Scifi_Efficiency']   = Scifi_monitoring.Scifi_trackEfficiency()
+import TwoTrackFinder
+monitorTasks['searchForVx']   = TwoTrackFinder.searchForVx()
 
 for m in monitorTasks:
     monitorTasks[m].Init(options,M)
@@ -231,7 +229,6 @@ if not options.auto:   # default online/offline mode
           else: 
                 print('child process has finished',len(process)-1,pid,exit_code)
                 process.remove(pid)
-     M.h = {}
      for i in range(options.parallel):
         tmp = 'tmp'+str(options.runNumber)+'p'+str(i)
         if tmp in os.listdir('.'):         ut.readHists(M.h,tmp)
@@ -241,9 +238,13 @@ if not options.auto:   # default online/offline mode
 
      for m in monitorTasks:
           monitorTasks[m].Plot()
-     print('i am finished')
-     M.presenterFile.daq.ls()
- ut.writeHists(M.h,'allHistos-run'+M.runNr+'.root')
+     # check if all events had been processed
+     if 'Etime' in M.h:
+       if not M.h['Etime'].GetEntries() == options.nEvents:
+         print('event count failed! Processed:',M.h['Etime'].GetEntries(),' total number of events:',options.nEvents)
+       else:
+         print('i am finished, all events processed')
+ if options.saveHistos: ut.writeHists(h,'allHistos-run'+M.runNr+'.root')
 
  M.publishRootFile()
  if options.sudo:
