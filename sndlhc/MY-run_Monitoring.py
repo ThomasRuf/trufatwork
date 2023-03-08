@@ -163,13 +163,13 @@ monitorTasks = {}
 #   monitorTasks['daq']     = DAQ_monitoring.DAQ_boards()
 #   monitorTasks['rates']   = DAQ_monitoring.Time_evolution()
 #monitorTasks['Scifi_hitMaps']   = Scifi_monitoring.Scifi_hitMaps()
-#monitorTasks['Mufi_hitMaps']   = Mufi_monitoring.Mufi_hitMaps()
+monitorTasks['Mufi_hitMaps']   = Mufi_monitoring.Mufi_hitMaps()
 #monitorTasks['Mufi_QDCcorellations']   = Mufi_monitoring.Mufi_largeVSsmall()
 #monitorTasks['Scifi_residuals'] = Scifi_monitoring.Scifi_residuals()   # time consuming
 #if options.interactive:  monitorTasks['EventDisplay']   = EventDisplay_Task.twod()
 
 #monitorTasks['Veto_Efficiency']   = Mufi_monitoring.Veto_Efficiency()
-monitorTasks['Scifi_Efficiency']   = Scifi_monitoring.Scifi_trackEfficiency()
+#monitorTasks['Scifi_Efficiency']   = Scifi_monitoring.Scifi_trackEfficiency()
 
 for m in monitorTasks:
     monitorTasks[m].Init(options,M)
