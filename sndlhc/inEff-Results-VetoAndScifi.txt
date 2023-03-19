@@ -352,6 +352,7 @@ for c in ['clSize','hitPerPlane','USQDC']:
   rc = h['L'+c].AddEntry(hMC[c],'MC: mean = %5.2F'%(hMC[c].GetMean()),"L")
   h['L'+c].Draw()
   h['T'+c].Print('MCDataComparison-'+c+'.png')
+  h['T'+c].Print('MCDataComparison-'+c+'.root')
 c='USQDC'
 shift = hMC[c].GetMean() - h[c].GetMean()
 if 1:
@@ -367,6 +368,7 @@ if 1:
  rc = h['L'+c+'shifted'].AddEntry(hMC[c+'shifted'],'MC shifted -%4.0FQDC: mean = %5.2F'%(bshift*hMC[c].GetBinWidth(1),hMC[c+'shifted'].GetMean()),"L")
  h['L'+c+'shifted'].Draw()
  h['T'+c].Print('MCDataComparison-'+c+'shifted.png')
+ h['T'+c].Print('MCDataComparison-'+c+'shifted.root')
 
 def convol(c):
    ut.bookHist(h,'hitsIn4Planes','hits in 4 Planes',200,-0.5,199.5)

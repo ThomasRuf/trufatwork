@@ -94,7 +94,8 @@ myPythia.OpenFortranFile(11, os.devnull)
 myPythia.SetMSTU(11, 11) # myPythia.SetMSTU(11, 6), myPythia.Pystat(2)
 
 charmContent={}
-for idp in idbeam:
+def runPythia():
+ for idp in idbeam:
     name=PDG.GetParticle(idp).GetName()
     charmContent[idp]={}
     for t in [2212,2112]:
@@ -128,8 +129,7 @@ for idp in idbeam:
          h[cname].AddPoint(E,xsec)
 
 # get inelastic cross section
-for idp in idbeam:
-    name=PDG.GetParticle(idp).GetName()
+ for idp in idbeam:
     for t in [2212,2112]:
       tname=PDG.GetParticle(t).GetName()
       gname = 'inel sigma vs p, '+name+'->'+target[t]
@@ -144,12 +144,23 @@ for idp in idbeam:
 #  get cross-section
          xsec = tp.getPyint5_XSEC(2,0)
          h[gname].AddPoint(E,xsec)
-         
+ 
+# save all tgraphs
+ f=ROOT.TFile('Pythia6Xsec.root','recreate')
+ for gname in h: 
+    h[gname].SetName(gname)
+    h[gname].Write()
+ f.Close()
+ 
 A=184  
 sigma_inel = {'n0':8.7,'Lambda0':8.7,'KL0':8.7*2/3 }  # 8.7 mbarn proton/neutron per nucleon
 # what about KL? should be 2/3 * 8.9
 
 if 1:
+ if len(h)==0:
+    f=ROOT.TFile('Pythia6Xsec.root')
+    for key in f.GetListOfKeys():
+       h[f.GetName()] = f.Get(key.GetName()).Clone(key.GetName())
  ut.bookHist(h,'xsec',';GeV;mbarn',100,0.,Erange[1])
  ut.bookCanvas(h,'tc','',1200,600,1,1)
  h['xsec'].SetMaximum(0.0025)
@@ -206,36 +217,85 @@ if 1:
  h['chi sigma charm vs p, Lambda0->n0'].Draw('same')
  h['chi sigma charm vs p, n0->n0'].Draw('same')
 
+ut.readHists(h,"/mnt/hgfs/microDisk/SND@LHC/MuonDis/Muons Extended Scoring Plane/muonDISfull.root")
+parts = [130,2112,-2112,310,3122,-3122,3322,-3322,22]
+# 1E34 cm-2 s-1, 1fb = 1e-39 cm2, means 1fb requires 1E5 sec
+fbScale = 1E5
+totRates = {'_':{},'Veto_':{}}
+for pid in parts:
+   for  o in ["","prim"]:
+      hname       = "Esnd"+o+"_"+str(pid)
+      h[hname] = h["E"+o+"_"+str(pid)].ProjectionX(hname)
+      h["Esnd"+o+"_all_"+str(pid)] = h["E"+o+"_veto_"+str(pid)].ProjectionX("Esnd"+o+"_all_"+str(pid))
+      rc = h["Esnd"+o+"_all_"+str(pid)] .Add(h[hname] )
+   hnameScaled       = "Esnd_"+str(pid)+"_fb150"
+   h[hnameScaled] = h["Esnd_"+str(pid)].Clone(hnameScaled)
+   rc = h[hnameScaled].Scale(150.*fbScale)
+   hnameScaled       = "Esnd_all_"+str(pid)+"_fb150"
+   h[hnameScaled] = h["Esnd_all_"+str(pid)].Clone(hnameScaled)
+   rc = h[hnameScaled].Scale(150.*fbScale)
+   for case in ['_','Veto_']:
+      h['rateWithMuon'+case+str(pid)] = h["Esnd_"+str(pid)].Clone('rateWithMuon'+case+str(pid))
+      h['rateWithMuon'+case+str(pid)].Reset()
+      for j in range(1,h['rateWithMuon'+case+str(pid)].GetNbinsX()+1):
+         e = h["Esnd_"+str(pid)+"_fb150"].GetBinCenter(j)
+         if e<Erange[0]: continue
+         if case=='Veto_': v = h["Esnd_"+str(pid)+"_fb150"].GetBinContent(j)
+         if case=='_':     v = h["Esnd_all_"+str(pid)+"_fb150"].GetBinContent(j)
+         rate = h['chi sigma vs p, '+name+'->n0'].Eval(e)+h['chi sigma vs p, '+name+'->p+'].Eval(e)
+         if rate<0: continue
+         binc = v/150.*40.*0.5*(rate)
+         h['rateWithMuon'+case+str(pid)].SetBinContent(j,binc)
+      totRates[case][pid] = h['rateWithMuon'+case+str(pid)].GetSumOfWeights()
+   print('total rate %5i, all: %5.2F   Veto:%5.2F'%(pid,h['rateWithMuon_'+str(pid)].GetSumOfWeights(),h['rateWithMuonVeto_'+str(pid)].GetSumOfWeights()) )
+for case in ['_','Veto_']:
+ N=0
+ for pid in parts:
+   if pid == 22: continue
+   N += totRates[case][pid]
+ print(case,N)
+ 
 neutralRates = {}
 neutralRatesG = {}
-neutralRatesG['n0']={100:6.8E3+6.1E3,200:1.9E3+2.1E3,300:1E3+483.7,500:95.6+119.1,1000:0}
-neutralRatesG['KL0']={100:1.2E4,200:3.9E3,300:1.6E3,500:527.4,1000:26.4}
-neutralRatesG['KS0']={100:1.2E4,200:4.4E3,300:2.4E3,500:444.7,1000:0}
-neutralRatesG['Lambda0']={100:1.8E3+2.9E3,200:573.6+1.4E3,300:134.3+132.5,500:18.9+81.7,1000:0}
+neutralRatesG[''] = {}
+neutralRatesG['veto'] = {}
+neutralRatesG['']['n0']     ={100:6.8E3+6.1E3,200:1.9E3+2.1E3,300:1E3+483.7,500:95.6+119.1,1000:0}
+neutralRatesG['']['KL0']    ={100:1.2E4,200:3.9E3,300:1.6E3,500:527.4,1000:26.4}
+neutralRatesG['']['KS0']    ={100:1.2E4,200:4.4E3,300:2.4E3,500:444.7,1000:0}
+neutralRatesG['']['Lambda0']={100:1.8E3+2.9E3,200:573.6+1.4E3,300:134.3+132.5,500:18.9+81.7,1000:0}
+#
+neutralRatesG['veto']['n0']     ={100:135.6+83.7,200:56.6+26.6,300:20.8+13.5,500:20.8+0,1000:0}
+neutralRatesG['veto']['KL0']    ={100:536.2,200:152.5,300:93.1,500:26.4,1000:26.4}
+neutralRatesG['veto']['KS0']    ={100:491.4,200:190.5,300:114.7,500:50.6,1000:0}
+neutralRatesG['veto']['Lambda0']={100:42+50.7,200:0+6.9,300:0,500:0,1000:0}
 # differential rates
-for m in neutralRatesG:
-  neutralRates[m]={}
-  E = list(neutralRatesG[m].keys())
+for case in ['','veto']:
+ neutralRates[case] = {}
+ for m in neutralRatesG[case]:
+  neutralRates[case][m]={}
+  E = list(neutralRatesG[case][m].keys())
   E.reverse()
   S = 0
   for e in E:
-     v = neutralRatesG[m][e] - S
+     v = neutralRatesG[case][m][e] - S
      if m == 'KS0': name = 'KL0'
      else: name = m
-     neutralRates[m][e] = v/150.*30.*0.5*(h['chi sigma vs p, '+name+'->n0'].Eval(e)+h['chi sigma vs p, '+name+'->p+'].Eval(e))
-     S += neutralRatesG[m][e]
-
-if 1:
+     neutralRates[case][m][e] = v/150.*30.*0.5*(h['chi sigma vs p, '+name+'->n0'].Eval(e)+h['chi sigma vs p, '+name+'->p+'].Eval(e))
+     S += neutralRatesG[case][m][e]
+#
  E.sort()
+ totalN = 0
  txt = "energy        "
  for e in E:
      txt+=" %5i   "%(e)
  print(txt)
- for m in neutralRates:
+ for m in neutralRates[case]:
    txt = "%10s  "%(m)
    for e in E:
-     txt+="   %5.1G "%(neutralRates[m][e] )
+     txt+=" %6s  %5.1G "%(case,neutralRates[case][m][e] )
+     totalN+=neutralRates[case][m][e]
    print(txt)
+ print(totalN)
 
 ut.writeHists(h,'neutralXsec-'+pythiaTune+'.root')
 import pickle

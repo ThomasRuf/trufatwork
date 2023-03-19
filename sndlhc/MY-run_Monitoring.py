@@ -37,7 +37,7 @@ parser.add_argument( "--withCalibration", action='store_true', dest="makeCalibra
 
 parser.add_argument("-f", "--inputFile", dest="fname", help="file name for MC", type=str,default=None,required=False)
 parser.add_argument("-g", "--geoFile", dest="geoFile", help="geofile", required=False,default=False)
-parser.add_argument("-b", "--heartBeat", dest="heartBeat", help="heart beat", default=10000,type=int)
+parser.add_argument("-b", "--heartBeat", dest="heartBeat", help="heart beat", default=1000000,type=int)
 parser.add_argument("-c", "--command", dest="command", help="command", default="")
 parser.add_argument("-n", "--nEvents", dest="nEvents", help="number of events", default=-1,type=int)
 parser.add_argument("-s", "--nStart", dest="nStart", help="first event", default=0,type=int)
@@ -54,6 +54,7 @@ parser.add_argument("--withTrack", dest="withTrack", action='store_true',default
 parser.add_argument("--nTracks", dest="nTracks",default=0,type=int)
 parser.add_argument("--save", dest="save", action='store_true',default=False)
 parser.add_argument("--interactive", dest="interactive", action='store_true',default=False)
+parser.add_argument("--sH", dest="saveHistos", action='store_true',default=False,help="save all histos not only TCanvas")
 
 parser.add_argument("--parallel", dest="parallel",default=1,type=int)
 
@@ -76,6 +77,9 @@ if options.runNumber < 0  and not options.geoFile:
 #RUN2: 13 Sept 2022 -
 
 if not options.geoFile:
+   if options.path.find('TI18')<0:
+     options.geoFile =  "geofile_sndlhc_TI18_V0_2022.root"
+   else:
      if options.runNumber < 4575:
            options.geoFile =  "geofile_sndlhc_TI18_V3_08August2022.root"
      elif options.runNumber < 4855:
