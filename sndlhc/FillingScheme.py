@@ -111,11 +111,13 @@ class fillingScheme():
         tmp = fillnr
         alternative = self.alternativeFill(str(fillnr))
         if alternative: tmp = alternative
+        Y = "2022"
+        if fillnr > 8500 : Y = "2023"
         if not self.lpcFillingscheme:
-             with urlopen('https://lpc.web.cern.ch/cgi-bin/fillTable.py?year=2022') as webpage:
+             with urlopen('https://lpc.web.cern.ch/cgi-bin/fillTable.py?year='+Y) as webpage:
                self.lpcFillingscheme = webpage.read().decode()
                self.tagi = '<td>XXXX</td>'
-               self.tagj = 'fillingSchemes/2022/candidates/'
+               self.tagj = 'fillingSchemes/'+Y+'/candidates/'
         fs = 0
         i = self.lpcFillingscheme.find(self.tagi.replace('XXXX',str(tmp)))
         if i>0:
@@ -148,9 +150,11 @@ class fillingScheme():
        return fillNumber
 
    def getLumiAtIP1(self,fillnr=None,fromnxcals=False):
+     Y = "2022"
+     if fillnr>8500: Y = "2023"
      if not fromnxcals:
        try:
-          with urlopen('https://lpc.web.cern.ch/cgi-bin/fillAnalysis.py?year=2022&action=fillData&exp=ATLAS&fillnr='+str(fillnr)) as webpage:
+          with urlopen('https://lpc.web.cern.ch/cgi-bin/fillAnalysis.py?year='+Y+'&action=fillData&exp=ATLAS&fillnr='+str(fillnr)) as webpage:
               tmp = webpage.read().decode()
        except:
           print('lumi info not avaible from lpc.',fillnr)
@@ -1754,11 +1758,12 @@ if __name__ == '__main__':
     parser.add_argument("-p", dest="path",       help="path to filling scheme", default="/mnt/hgfs/microDisk/SND@LHC/TI18/FillingSchemes/")
     parser.add_argument("-L", dest="lumiversion", help="offline or online lumi from ATLAS", default="offline")
     parser.add_argument("-ip2", dest="withIP2", help="with IP2",default=True)
-    parser.add_argument("-raw", dest="rawData", help="path to rawData",default="/eos/experiment/sndlhc/raw_data/physics/2022")   # before "/eos/experiment/sndlhc/raw_data/commissioning/TI18/data"
+    parser.add_argument("-raw", dest="rawData", help="path to rawData",default="/eos/experiment/sndlhc/raw_data/physics/2023_tmp")   # before "/eos/experiment/sndlhc/raw_data/commissioning/TI18/data"
     parser.add_argument("-www", dest="www", help="path to offline folder",default=os.environ['EOSSHIP']+"/eos/experiment/sndlhc/www/")
 
     options = parser.parse_args()
     if options.rawData.find('2022')>0 and options.path.find('TI18')>0: options.path="/mnt/hgfs/microDisk/SND@LHC/2022/FillingSchemes/"
+    elif options.rawData.find('2023')>0 and options.path.find('TI18')>0: options.path="/mnt/hgfs/microDisk/SND@LHC/2023/FillingSchemes/"
     www = options.www
     FS = fillingScheme()
     FS.Init(options)
