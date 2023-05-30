@@ -1,9 +1,13 @@
 import ROOT
 import os
+import time,calendar
 import rootUtils as ut
 h={}
 #     5399,5396,5262,5253,5408,5389,5377,5263,5259,5350,5257,5125 now running with proper xy distr, hopefully
-runs=[5389,5408,5125,5396,5350,5399,5263,5377,5262,5259,5257,5253,   # runs with prevTime  --> 6001 
+# running on cs8     [5171,5159,5157,5154,5152]:finished
+# running on 2004-16 [5133,5132,5130,5122]: finished
+
+runs=[5389,5408,5125,5396,5350,5399,5263,5377,5262,5259,5257,5253,5171,5159,5157,5154,5133,5132,5130,5122,5152,   # runs with prevTime  --> 6001 
 5059,5120,5154,5170,5180,5236,5239,5036,5044,5056,
                         4572,4595,4617,4626,4612,4639,4661,4649,4724,4744,4758,4769,4815,4958,4964,4971,4976,4980,4990,5000,5005,5013,5024,5059,5094,5109]
 runs.sort()
@@ -105,20 +109,34 @@ runsWithEventDisplays = [5125,5253, 5257, 5259, 5262, 5263, 5350, 5377, 5389, 53
 
 def updateFigures():
    path = "/mnt/hgfs/microDisk/SND@LHC/Analysis Notes/VetoInefficiency/"
-   t = open(path+"introduction.tex")
    listOfFigures = []
-   for l in t.readlines():
+   for X in [path+"introduction.tex",path+"eventPictures.tex"]:
+    t = open(X)
+    for l in t.readlines():
       if l.find('figs/')<0: continue
       for x in l.split('figs/'):
          for ex in ['.pdf','.png']:
             if x.find(ex)<0: continue
             k = x.find(ex)+4
             listOfFigures.append(x[:k])
-   t.close()
+    t.close()
    for p in listOfFigures:
      if not p.find('eventsRun')<0: continue
      print("%30s :  %25s, %25s"%(p,time.ctime(os.path.getmtime(p)), time.ctime(os.path.getmtime(path+"figs/"+p)) ) )
- 
+   for p in listOfFigures:
+      if p.find('-event')>0: os.system('cp '+p+' '+path.replace(' ','\ ')+'figs/')
+
+def lowUpLimit(p,n):
+      return [0.5*ROOT.TMath.ChisquareQuantile((1-p),2*n),0.5*ROOT.TMath.ChisquareQuantile(p,2*(n+1))]
+def printInEffasFuncOfDate(noise=5,sel='NoPrev',p=0.9):
+   for r in stats:
+      t = stats[r][sel][noise]['date']
+      inEff = stats[r][sel][noise]['OR'][0]
+      einEff = stats[r][sel][noise]['OR'][1]
+      Nr = stats[r][sel][noise]['Ntot_r']
+      NinEff = inEff*Nr
+      cL = lowUpLimit(p,NinEff)
+      print("%i %s  %5.2F+/- [%5.2F,%5.2F] 1E-6  %i"%(r,time.ctime(t),cL[0]/Nr*1E6,cL[1]/Nr*1E6,einEff*1E6,NinEff))
 
 CB = {}
 def makeEventDisplays():
@@ -291,12 +309,13 @@ def timeDiffPrevNextEvent(r=6001):
    myPrint(h['TtimeDiff'],'timeDiffPrev_'+str(r))
 
 from rootpyPickler import Unpickler
+from rootpyPickler import Pickler
 fg  = ROOT.TFile.Open(os.environ['EOSSHIP']+"/eos/experiment/sndlhc/convertedData/physics/2022/RunInfodict.root")
 pkl = Unpickler(fg)
 runInfo = pkl.load('runInfo')
 fg.Close()
 
-for rspecial in [6000,6001]:
+for rspecial in [6000,6001,6018]:
  runInfo[rspecial]={}
  runInfo[rspecial]['muAv']={}
  runInfo[rspecial]['muAv']['']=50
@@ -373,22 +392,36 @@ def makePlotsForNote(r=5125):
            else:
                projY = 'T'+c+str(nc)+x+'PosVeto_'+p+'Y' 
                hr[projY] = hr['T'+c+str(nc)+x+'PosVeto_'+p].ProjectionY(projY)
+               projX = 'T'+c+str(nc)+x+'PosVeto_'+p+'X' 
+               hr[projX] = hr['T'+c+str(nc)+x+'PosVeto_'+p].ProjectionX(projX)
            hr[projY].Reset()
+           hr[projX].Reset()
            for iy in range(region[2],region[3]):
              N = 0
              for ix in range(region[0],region[1]):
                 N+=hr['T'+c+str(nc)+x+'PosVeto_'+p].GetBinContent(ix,iy)
              hr[projY].SetBinContent(iy,N)
+           for ix in range(region[0],region[1]):
+             N = 0
+             for iy in range(region[2],region[3]):
+                N+=hr['T'+c+str(nc)+x+'PosVeto_'+p].GetBinContent(ix,iy)
+             hr[projX].SetBinContent(ix,N)
+             
        for p in ['0','1','11','01','10','11']:
           hr['eff'+c+str(nc)+'PosVeto_'+p+'Y']=hr['T'+c+str(nc)+'XPosVeto_'+p+'Y'].Clone( 'eff'+c+str(nc)+'PosVeto_'+p+'Y')
+          hr['eff'+c+str(nc)+'PosVeto_'+p+'X']=hr['T'+c+str(nc)+'XPosVeto_'+p+'X'].Clone( 'eff'+c+str(nc)+'PosVeto_'+p+'X')
           if p in ['01','10']:
              if p=='10':  hr['eff'+c+str(nc)+'PosVeto_'+p+'Y'].Divide(hr['T'+c+str(nc)+'PosVeto_0Y'])
              if p=='01':  hr['eff'+c+str(nc)+'PosVeto_'+p+'Y'].Divide(hr['T'+c+str(nc)+'PosVeto_1Y'])
           else:
              hr['eff'+c+str(nc)+'PosVeto_'+p+'Y'].Divide(hr['T'+c+str(nc)+'PosVeto_'+p+'Y'])
+             hr['eff'+c+str(nc)+'PosVeto_'+p+'X'].Divide(hr['T'+c+str(nc)+'PosVeto_'+p+'X'])
           hr['eff'+c+str(nc)+'PosVeto_'+p+'Y'].SetStats(0)
           hr['eff'+c+str(nc)+'PosVeto_'+p+'Y'].SetTitle('')
           hr['eff'+c+str(nc)+'PosVeto_'+p+'Y'].SetLineColor(Marker[p][1])
+          hr['eff'+c+str(nc)+'PosVeto_'+p+'X'].SetStats(0)
+          hr['eff'+c+str(nc)+'PosVeto_'+p+'X'].SetTitle('')
+          hr['eff'+c+str(nc)+'PosVeto_'+p+'X'].SetLineColor(Marker[p][1])
        hr['TPosVeto'].SetLogy(1)
        hr['eff'+c+str(nc)+'PosVeto_11Y'].SetMaximum(4E-4)
        hr['eff'+c+str(nc)+'PosVeto_11Y'].Draw()
@@ -403,6 +436,19 @@ def makePlotsForNote(r=5125):
        X.SetTextColor(Marker['11'][1])
        h['leff'].Draw()
        myPrint(hr['TPosVeto'],'VetoInEffvsY_'+str(nc)+'_'+str(r))
+#
+       hr['TPosVeto'].SetLogy(0)
+       hr['eff'+c+str(nc)+'PosVeto_0X'].SetMaximum(7E-5)
+       hr['eff'+c+str(nc)+'PosVeto_0X'].Draw()
+       hr['eff'+c+str(nc)+'PosVeto_1X'].Draw('same')
+       h['leffX']=ROOT.TLegend(0.71,0.59,0.88,0.88)
+       X = h['leffX'].AddEntry(hr['eff'+c+str(nc)+'PosVeto_0X'],'plane 0 ',"LP")
+       X.SetTextColor(Marker['0'][1])
+       X = h['leffX'].AddEntry(hr['eff'+c+str(nc)+'PosVeto_1X'],'plane 1 ',"LP")
+       X.SetTextColor(Marker['1'][1])
+       h['leffX'].Draw()
+       myPrint(hr['TPosVeto'],'VetoInEffvsX_'+str(nc)+'_'+str(r))
+
      hr['TPosVeto'].SetLogy(0)
      c = 'NoPrev'
      for nc in ['5','12']:
@@ -428,7 +474,7 @@ def makePlotsForNote(r=5125):
        myPrint(hr['TPosVeto'],'NoHitPosVeto_'+str(nc)+str(p)+'_'+str(r))
      flatex = open('table-'+str(r)+'.tex','w')
      for c in ['all','','NoPrev']:
-        prev = stats[r][''][5][9]/100
+        prev = stats[r][''][5]['trackPerEvent']/100
         eprev = int(ROOT.TMath.Log10(prev)-1)
         # if c=='': line = "\\multicolumn{4}{|c|}{With previous event, $%5.2F \\times 10^{%i}$ of the events}\\\\ \n"%(prev/10**eprev,eprev)
         if c=='': line = "\\multicolumn{4}{|c|}{With previous event, $%5.2F%% of the events}\\\\ \n"%(prev*100)
@@ -442,7 +488,8 @@ def makePlotsForNote(r=5125):
            for i in [1,3,7]:
               e[i]=int(ROOT.TMath.Log10(val[i])-1)
            line = "$%i$ & $(%5.2F \pm %5.2F)\\times 10^{%i}$ &  $(%5.2F \pm %5.2F)\\times 10^{%i}$ &  $(%5.2F \pm %5.2F)\\times 10^{%i}$ \\\\ \n"%(noiseCut,
-              val[1]/10**e[1],val[2]/10**e[1],e[1],val[3]/10**e[3],val[4]/10**e[3],e[3],val[7]/10**e[7],val[8]/10**e[7],e[7])
+              val['plane0'][0]/10**e[1],val['plane0'][1]/10**e[1],e[1],val['plane1'][0]/10**e[3],val['plane1'][1]/10**e[3],e[3],
+              val['OR'][0]/10**e[7],val['OR'][1]/10**e[7],e[7])
            flatex.write(line)
      flatex.write('--- single plane ineff\n')
      for c in ['all','','NoPrev']:
@@ -451,10 +498,11 @@ def makePlotsForNote(r=5125):
            val = stats[r][c][noiseCut]
        # $N_{hits}< & no Veto 0 & no Veto 1 & no Veto 0 and no Veto 1  
            e={}
-           for i in [0,2]:
-              e[i]=int(ROOT.TMath.Log10(val[10][i])-1)
+           for i in ['plane10','plane01']:
+              e[i]=int(ROOT.TMath.Log10(val[i][0])-1)
            line = "$%i$ & $(%5.2F \pm %5.2F)\\times 10^{%i}$ &  $(%5.2F \pm %5.2F)\\times 10^{%i}$ \\\\ \n"%(noiseCut,
-              val[10][0]/10**e[0],val[10][1]/10**e[0],e[0],val[10][2]/10**e[2],val[10][3]/10**e[2],e[2])
+              val['plane10'][0]/10**e['plane10'],val['plane10'][1]/10**e['plane10'],e['plane10'],
+              val['plane11'][0]/10**e['plane11'],val['plane11'][1]/10**e['plane11'],e['plane11'])
            flatex.write(line)
      flatex.close()
 
@@ -500,14 +548,21 @@ def checkPrevEvent(evtlist=[115837036,53699368,23022923,55077814,39311734,617081
 
 stats = {}
 timeRange = {}
-def printVetoEff(noiseCut=[5]):
-   # if prev==1000: runs=[4964,5125,5350]  different prev event 1000 clock cycles
+def printVetoEff(noiseCut=[5],sel='NoPrev',prob=0.9):
  vetoEfficiency(runs,v='',name='noBackward/allHistos-run00XXXX.root',noiseCuts = noiseCut)
  for nc in noiseCut:
   for r in stats:
-     timeRange[stats[r]['NoPrev'][nc][0]] = [stats[r]['NoPrev'][nc][7],stats[r]['NoPrev'][nc][8],
-     stats[r]['NoPrev'][nc][1],stats[r]['NoPrev'][nc][2],
-     stats[r]['NoPrev'][nc][3],stats[r]['NoPrev'][nc][4]]
+     Nr = stats[r][sel][nc]['Ntot_r']
+     inEffOr = stats[r][sel][nc]['OR'][0]
+     tmp = lowUpLimit(prob,inEffOr*Nr)
+     cLOR = [ (inEffOr*Nr-tmp[0])/Nr,(tmp[1]-inEffOr*Nr)/Nr ]
+     inEff0 = stats[r][sel][nc]['plane0'][0]
+     tmp = lowUpLimit(prob,inEff0*Nr)
+     cL0 =  [ (inEff0*Nr-tmp[0])/Nr,(tmp[1]-inEff0*Nr)/Nr ]
+     inEff1 = stats[r][sel][nc]['plane1'][0]
+     tmp = lowUpLimit(prob,inEff1*Nr)
+     cL1 =  [ (inEff1*Nr-tmp[0])/Nr,(tmp[1]-inEff1*Nr)/Nr ]
+     timeRange[stats[r][sel][nc]['date']] = [inEffOr,cLOR,inEff0,cL0,inEff1,cL1]
   T = list(timeRange.keys())
   T.sort()
   tstart = T[0]
@@ -515,23 +570,29 @@ def printVetoEff(noiseCut=[5]):
   Marker = {'p0':[22,ROOT.kMagenta],'p1':[23,ROOT.kBlue],'':[72,ROOT.kGreen]}
   for p in Marker:
     evolnc = p+'evol'+str(nc)
-    h[evolnc] = ROOT.TGraphErrors()
+    h[evolnc] = ROOT.TGraphAsymmErrors()
     h[evolnc].SetLineWidth(2)
     h[evolnc].SetMarkerStyle(Marker[p][0])
     h[evolnc].SetMarkerColor(Marker[p][1])
     h[evolnc].SetMarkerSize(2)
     n = 0
     for t in T:
-      if timeRange[t][0]<1E-9: continue
       k=0
       if p=='p0': k = 2
       if p=='p1': k = 4
       h[evolnc].SetPoint(n,t,timeRange[t][k])
-      h[evolnc].SetPointError(n,500,timeRange[t][k+1])
+      h[evolnc].SetPointError(n,500,500,timeRange[t][k+1][0],timeRange[t][k+1][1])
       n+=1
   if not 'inEff' in h:
-   delta = (tend-tstart)*0.025
-   ut.bookHist(h,'inEff',';time ; inEff',300,tstart-delta,tend+delta)
+   # delta = (tend-tstart)*0.025
+   # ut.bookHist(h,'inEff',';time ; inEff',300,tstart-delta,tend+delta)
+   dateA = '07-20,2022-0'
+   dateB = '12-01,2022-0'
+   time_objA = time.strptime(dateA,'%m-%d,%Y-%H')
+   time_objB = time.strptime(dateB,'%m-%d,%Y-%H')
+   TA = calendar.timegm(time_objA)
+   TB = calendar.timegm(time_objB)
+   ut.bookHist(h,'inEff',';time ; inEff',300,TA,TB)
    ut.bookCanvas(h,'TinEff','',2400,800,1,1)
    tc = h['TinEff'].cd()
    tc.SetLogy(1)
@@ -542,20 +603,20 @@ def printVetoEff(noiseCut=[5]):
    h['inEff'].SetMaximum(1E-2)
    h['inEff'].SetMinimum(1E-7)
    h['inEff'].SetStats(0)
-   h['inEff'].Draw()
+  h['inEff'].Draw()
   for p in Marker:
     evolnc = p+'evol'+str(nc)
     h[evolnc].Draw('same')
     h[evolnc].Draw('sameP')
- h['levol']=ROOT.TLegend(0.32,0.28,0.49,0.57)
- X = h['levol'].AddEntry(h['p0evol'+str(nc)],'plane 0 ',"LP")
- X.SetTextColor(h['p0evol'+str(nc)].GetMarkerColor())
- X = h['levol'].AddEntry(h['p1evol'+str(nc)],'plane 1 ',"LP")
- X.SetTextColor(h['p1evol'+str(nc)].GetMarkerColor())
- X = h['levol'].AddEntry(h['evol'+str(nc)],'detector ',"LP")
- X.SetTextColor(h['evol'+str(nc)].GetMarkerColor())
- h['levol'].Draw()
- myPrint(h['TinEff'],'VetoInEffOverTime_'+str(nc))
+  h['levol']=ROOT.TLegend(0.32,0.28,0.49,0.57)
+  X = h['levol'].AddEntry(h['p0evol'+str(nc)],'plane 0 ',"LP")
+  X.SetTextColor(h['p0evol'+str(nc)].GetMarkerColor())
+  X = h['levol'].AddEntry(h['p1evol'+str(nc)],'plane 1 ',"LP")
+  X.SetTextColor(h['p1evol'+str(nc)].GetMarkerColor())
+  X = h['levol'].AddEntry(h['evol'+str(nc)],'detector ',"LP")
+  X.SetTextColor(h['evol'+str(nc)].GetMarkerColor())
+  h['levol'].Draw()
+  myPrint(h['TinEff'],'VetoInEffOverTime_'+str(nc))
  
  # deadtime
  # muon rate = 1.84E4 fb/cm2 * 6*42 cm2 
@@ -576,6 +637,8 @@ def vetoEfficiency(runs,v='',name='noBackward/allHistos-run00XXXX.root',noiseCut
      print('*** analyzing '+fname)
      wa = ['scaler','hitVeto_X','hitVeto_Y','deltaT','X/Y','timeDiffPrev','XStimeDiffPrev']
      for noiseCut in [1,5,10,12]:
+        wa.append('timeDiffPrev_'+str(noiseCut))
+        wa.append('XtimeDiffPrev_'+str(noiseCut))
         for c in ['','NoPrev']:
           for b in ['','beam']:
                nc = 'T'+c+str(noiseCut)+b
@@ -647,7 +710,8 @@ def vetoEfficiency(runs,v='',name='noBackward/allHistos-run00XXXX.root',noiseCut
        print('veto0: %3.1E +/- %3.1E veto1: %3.1E +/- %3.1E veto0AND1: %3.1E +/- %3.1E veto0OR1: %3.1E +/- %3.1E '%( ineff0_r,sig_ineff0_r,ineff1_r,sig_ineff1_r,ineffAND_r,sig_ineffAND_r,ineffOR_r,sig_ineffOR_r))
      #                                   1         2            3          4          5           6            7           8              9
        scifiTrackPrevEvent = 100*(1-h[r][o]['scaler'][2]/h[r][o]['scaler'][1])
-       stats[r][c][noiseCut]=[runInfo[r]['StartTime'],ineff0_r,sig_ineff0_r,ineff1_r,sig_ineff1_r,ineffAND_r,sig_ineffAND_r,ineffOR_r,sig_ineffOR_r,scifiTrackPrevEvent]
+       stats[r][c][noiseCut]={'date':runInfo[r]['StartTime'],'Ntot_r':Ntot_r,'plane0':[ineff0_r,sig_ineff0_r],'plane1':[ineff1_r,sig_ineff1_r],
+                              'AND':[ineffAND_r,sig_ineffAND_r],'OR':[ineffOR_r,sig_ineffOR_r],'trackPerEvent':scifiTrackPrevEvent}
 # inefficiency of plane 0(1) if plane 1(0) fired
        hr[nc+'XPosVeto_10'] = hr[nc+'PosVeto_0'].Clone(nc+'XPosVeto_10')
        hr[nc+'XPosVeto_01'] = hr[nc+'PosVeto_1'].Clone(nc+'XPosVeto_01')
@@ -674,7 +738,8 @@ X_111   not P0 and not P1 at position P1
        Ntot_r = hr[nc+'PosVeto_1'].Integral(region[0],region[1],region[2],region[3])
        ineff01_r = hr[nc+'XPosVeto_01'].Integral(region[0],region[1],region[2],region[3])/Ntot_r
        sig_ineff01_r = ROOT.TMath.Sqrt(hr[nc+'XPosVeto_01'].Integral(region[0],region[1],region[2],region[3]))/Ntot_r
-       stats[r][c][noiseCut].append([ineff10_r,sig_ineff10_r,ineff01_r,sig_ineff01_r])
+       stats[r][c][noiseCut]['plane10'] = [ineff10_r,sig_ineff10_r]
+       stats[r][c][noiseCut]['plane01'] = [ineff01_r,sig_ineff01_r]
        print('no veto1 veto0: %3.1E +/- %3.1E no veto0 veto1: %3.1E +/- %3.1E '%( ineff10_r,sig_ineff10_r,ineff01_r,sig_ineff01_r))
 
      print('%5.2F%% of events with a Scifi track have a prev event '%(scifiTrackPrevEvent))
@@ -683,6 +748,11 @@ X_111   not P0 and not P1 at position P1
      elif not 'muAv' in runInfo[r]: print('mu average missing',r)
      else: muAv = runInfo[r]['muAv']['']
      print('mu = %5.2F'%(muAv))
+  if len(runs)>10:
+    fp = ROOT.TFile.Open('VetoInEffStats.root','recreate')
+    pkl = Pickler(fp)
+    pkl.dump(stats,'stats')
+    fp.Close()
 
 def debug(r=6000):
     c = 'NoPrev'
@@ -697,27 +767,41 @@ def debug(r=6000):
             print(hname, hr[hname].GetEntries())
 
 
-def ScifiIneffienciency(runs,name='allHistos-run00XXXX.root',path = "noBackward/"):
+def ScifiIneffienciency(runs,name='allHistos-run00XXXX.root',path = "/mnt/hgfs/microDisk/SND@LHC/2022/vetoEff_cleanTracks/noBackward/"):
 # allHistos-run004572.root .allHistos-run005236.root with plane inefficiencies
 
-  border = [14.964849051657234, 54.00431913184336, -46.21974599493218, -7.146496817384938]
-  limits = {1:{'X':[-44,-8],'Y':[16,50]},2:{'X':[-40,-12],'Y':[18,47]}}
-  sRef=1
-  h['TlineTop'+str(sRef)] = ROOT.TLine(border[2],border[1],border[3],border[1])
-  h['TlineBot'+str(sRef)] = ROOT.TLine(border[2],border[0],border[3],border[0])
-  h['TlineLef'+str(sRef)] = ROOT.TLine(border[2],border[0],border[2],border[1])
-  h['TlineRig'+str(sRef)] = ROOT.TLine(border[3],border[0],border[3],border[1])
+  border = {1: {0: [-46.07642436338805, -7.076849538271483], 1: [14.823752494688986, 53.820324353220755]}, 
+            2: {0: [-46.045690293545526, -7.046373102426196], 1: [14.662870326613831, 53.659184531258354]}, 
+            3: {0: [-46.021234619428235, -7.022092619428233], 1: [14.498185143430852, 53.49432414343085]}, 
+            4: {0: [-46.0186513529706, -7.0195299636900765], 1: [14.345028712321486, 53.341147100010815]}, 
+            5: {0: [-46.016618021002316, -7.017380696423783], 1: [14.212008931397556, 53.20824326333539]}}
+  if not border:  # create from detector module
+     border = {}
+     for sRef in range(1,6):
+       border[sRef]={}
+       for p in range(2):
+         scifi.GetSiPMPosition(1000000*sRef+100000*p,A,B)
+         border[sRef][p] = [A[p],B[p]]
+  for w in ['2','4']:
+    for sRef in range(1,6):
+        h['TlineTop'+w+str(sRef)] = ROOT.TLine(border[sRef][0][0],border[sRef][1][1],border[sRef][0][1],border[sRef][1][1])
+        h['TlineBot'+w+str(sRef)] = ROOT.TLine(border[sRef][0][0],border[sRef][1][0],border[sRef][0][1],border[sRef][1][0])
+        h['TlineLef'+w+str(sRef)] = ROOT.TLine(border[sRef][0][0],border[sRef][1][0],border[sRef][0][0],border[sRef][1][1])
+        h['TlineRig'+w+str(sRef)] = ROOT.TLine(border[sRef][0][1],border[sRef][1][0],border[sRef][0][1],border[sRef][1][1])
+        for x in ['TlineTop'+w+str(sRef),'TlineBot'+w+str(sRef),'TlineLef'+w+str(sRef),'TlineRig'+w+str(sRef)]: 
+          h[x].SetLineWidth(int(w))
+          h[x].SetLineColor(ROOT.kRed)
+
+  limits = {1:{'X':[-44,-8],'Y':[16,50]},2:{'X':[-41.5,-13.5],'Y':[20,49]}}
   wa=['scifiTrack','DStag']
   for s in range(0,6):
        for p in [-1,0,1]:
           if p<0:X = str(s)
           else: X=str(10*s+p)
           wa.append('scifiTrack_'+X)
-  for x in ['TlineTop'+str(sRef),'TlineBot'+str(sRef),'TlineLef'+str(sRef),'TlineRig'+str(sRef)]: 
-     h[x].SetLineWidth(2)
-     h[x].SetLineColor(ROOT.kRed)
   for r in runs:
    h[r]={}
+   hr=h[r]
    stats[r]={}
    fname = path+name.replace('XXXX',str(r))
    if not os.path.isfile(fname):
@@ -726,7 +810,7 @@ def ScifiIneffienciency(runs,name='allHistos-run00XXXX.root',path = "noBackward/
    print('*** analyzing '+fname)
    ut.readHists(h[r],fname,wanted=wa)
    if len(h[r])<6:   
-       ut.readHists(h[r],name.replace('XXXX',str(r)),wanted=wa)
+       ut.readHists(h[r],path+name.replace('XXXX',str(r)),wanted=wa)
        if len(h[r])<6:    continue
    bins = {}
    for l in limits :
@@ -734,7 +818,43 @@ def ScifiIneffienciency(runs,name='allHistos-run00XXXX.root',path = "noBackward/
        for p in limits[l]:
          for x in limits[l][p]:
              bins[l].append(eval('h['+str(r)+']["DStag"].Get'+p+'axis().FindBin(x)'))
-       # station inefficiency
+       # station inefficiency, fiducial volume
+   for w in ['2','4']:
+    for i in [1,2]:
+     hr['FlineTop'+w+str(i)] = ROOT.TLine(limits[i]['X'][0],limits[i]['Y'][1],limits[i]['X'][1],limits[i]['Y'][1])
+     hr['FlineBot'+w+str(i)] = ROOT.TLine(limits[i]['X'][0],limits[i]['Y'][0],limits[i]['X'][1],limits[i]['Y'][0])
+     hr['FlineLef'+w+str(i)] = ROOT.TLine(limits[i]['X'][0],limits[i]['Y'][0],limits[i]['X'][0],limits[i]['Y'][1])
+     hr['FlineRig'+w+str(i)] = ROOT.TLine(limits[i]['X'][1],limits[i]['Y'][0],limits[i]['X'][1],limits[i]['Y'][1])
+     for x in ['FlineTop'+w+str(i),'FlineBot'+w+str(i),'FlineLef'+w+str(i),'FlineRig'+w+str(i)]: 
+          hr[x].SetLineWidth(int(w))
+          if i==1: hr[x].SetLineColor(ROOT.kGreen)
+          else: hr[x].SetLineColor(ROOT.kBlack)
+
+   l=2
+   for s in range(0,6):
+     for p in [-1,0,1]:
+        if p<0:X = str(s)
+        else: X=str(10*s+p)
+        if s==0 and not p<0: continue
+        if not 'scifiTrack_'+X in h[r]: continue
+        for proj in ['X','Y']:
+           pname = 'scifiTrack_'+X+'_'+proj
+           if proj=='X': hr[pname]=hr['scifiTrack_'+X].ProjectionX(pname)
+           if proj=='Y': hr[pname]=hr['scifiTrack_'+X].ProjectionY(pname)
+           hr[pname].Reset()
+           if proj=='Y':
+             for iy in range(bins[l][2],bins[l][3]):
+               N = 0
+               for ix in range(bins[l][0],bins[l][1]):
+                  N+=hr['scifiTrack_'+X].GetBinContent(ix,iy)
+               hr[pname].SetBinContent(iy,N)
+           if proj=='X':
+             for iy in range(bins[l][0],bins[l][1]):
+               N = 0
+               for ix in range(bins[l][2],bins[l][3]):
+                  N+=hr['scifiTrack_'+X].GetBinContent(ix,iy)
+               hr[pname].SetBinContent(iy,N)
+
    stats[r]['utc'] = runInfo[r]['StartTime']
    stats[r]['ineff'] = {}
    for l in limits :
@@ -748,6 +868,54 @@ def ScifiIneffienciency(runs,name='allHistos-run00XXXX.root',path = "noBackward/
           sige = ROOT.TMath.Sqrt(h[r]['scifiTrack_'+X].Integral(bins[l][0],bins[l][1],bins[l][2],bins[l][3]))/h[r]['scifiTrack_0'].Integral(bins[l][0],bins[l][1],bins[l][2],bins[l][3])
           print('average efficiency station: %s %5.2F<X<%5.2F %5.2F<Y<%5.2F = %5.2G'%(X,limits[l]['X'][0],limits[l]['X'][1],limits[l]['Y'][0],limits[l]['Y'][1],e))
           stats[r]['ineff'][l][X] = [e,sige]
+# make plots for note:
+   ut.bookCanvas(h,'Tsineff','',1200,900,3,2)
+   for s in range(1,6):
+          tc = h['Tsineff'].cd(s)
+          tc.SetRightMargin(0.1)
+          tc.SetLogz(1)
+          hr['sineff'+str(s)] = hr['scifiTrack_'+str(s)].Clone('sineff'+str(s))
+          hr['sineff'+str(s)].Divide(hr['scifiTrack_0'])
+          hr['sineff'+str(s)].SetStats(0)
+          hr['sineff'+str(s)].SetMaximum(0.1)
+          hr['sineff'+str(s)].DrawCopy('colz')
+          for x in ['TlineTop2'+str(s),'TlineBot2'+str(s),'TlineLef2'+str(s),'TlineRig2'+str(s)]: h[x].Draw('same')
+          for i in [2]:
+              for x in ['FlineTop2'+str(i),'FlineBot2'+str(i),'FlineLef2'+str(i),'FlineRig2'+str(i)]: hr[x].Draw('same')
+   h['Tsineff'].Update()
+   myPrint(h['Tsineff'],'ScifiStationInEfficiency_run'+str(r).zfill(6))
+   for s in [1,10,11]:
+     if not 'sineff'+str(s) in hr: continue
+     ut.bookCanvas(h,'Tsineff'+str(s),'',1200,900,1,1)
+     tc = h['Tsineff'+str(s)].cd()
+     tc.SetLogz(1)
+     hr['sineff'+str(s)] = hr['scifiTrack_'+str(s)].Clone('sineff'+str(s))
+     hr['sineff'+str(s)].Divide(hr['scifiTrack_0'])
+     hr['sineff'+str(s)].SetStats(0)
+     hr['sineff'+str(s)].SetMaximum(0.2)
+     if s==1:  hr['sineff'+str(s)].Draw()
+     else:  hr['sineff'+str(s)].Draw('colz')
+     for x in ['TlineTop41','TlineBot41','TlineLef41','TlineRig41']: h[x].Draw('same')
+     for i in [2]:
+        for x in ['FlineTop4'+str(i),'FlineBot4'+str(i),'FlineLef4'+str(i),'FlineRig4'+str(i)]: hr[x].Draw('same')
+     h['Tsineff'+str(s)].Update()
+     myPrint(h['Tsineff'+str(s)],'ScifiStationInEfficiency'+str(s)+'_run'+str(r).zfill(6))
+   for proj in ['X','Y']:
+      if not 'sineff'+str(s) in hr: continue
+      for X in ['1','10','11']:
+         pname = 'scifiTrack_'+X+'_'+proj
+         ut.bookCanvas(h,'Tsineff'+str(X)+'_'+proj,'',1200,900,1,1)
+         tc = h['Tsineff'+str(s)].cd()
+         hr['sineff'+X+'_'+proj] = hr['scifiTrack_'+X+'_'+proj].Clone('sineff'+X+'_'+proj)
+         hr['sineff'+X+'_'+proj].Divide(hr['scifiTrack_0_'+proj])
+         hr['sineff'+X+'_'+proj].SetStats(0)
+         if X=='1': hr['sineff'+X+'_'+proj].SetMaximum(0.001)
+         if X=='1': hr['sineff'+X+'_'+proj].SetMaximum(0.01)
+         hr['sineff'+X+'_'+proj].Draw()
+         myPrint(h['Tsineff'+X+'_'+proj],'ScifiStationInEfficiency'+X+'_'+proj+'_run'+str(r).zfill(6))
+         
+  if len(stats)<2: return
+# make evolution plot
   for r in stats:
    if len(stats[r])<1:continue
    timeRange[stats[r]['utc']]={}
@@ -793,4 +961,137 @@ def ScifiIneffienciency(runs,name='allHistos-run00XXXX.root',path = "noBackward/
      X.SetTextColor(colors[s-1])
   h['lscifi'].Draw()
   myPrint(h['TinEff'],'ScifiInEffOverTime')
+
+def timeBoard(runs,stats=stats):
+  if len(stats)<10:
+      fp = ROOT.TFile.Open('VetoInEffStats.root')
+      pkl = Unpickler(fp)
+      stats  = pkl.load('stats')
+  h['timeBoard'] = {}
+  h['gTimeBoard'] = ROOT.TGraph()
+  h['gTimeBoard'].SetMarkerStyle(21)
+  h['gTimeBoard'].SetMarkerColor(ROOT.kBlue)
+  if not 'TinEff' in h:
+     ut.readHists(h,'VetoInEffOverTime_5.root')
+     h['inEff'] = h['TinEff'].FindObject('inEff').Clone()
+     h['TinEff'].Draw()
+  tc = h['TinEff'].cd()
+  tc.SetLogy(0)
+  h['inEff'].GetYaxis().SetTitle('time offset [clock cycles]')
+  h['inEff'].SetMaximum(0.5)
+  h['inEff'].SetMinimum(-2)
+  h['inEff'].Draw()
+  n = -1
+  for r in runs:
+    if not r in h: h[r]={}
+    n+=1
+    g = ROOT.TFile.Open(os.environ['EOSSHIP']+'/eos/experiment/sndlhc/www/offline/run'+str(r).zfill(6)+'.root')
+    ROOT.gROOT.cd()
+    if g.daq.FindKey('boards'):
+     h[r]['Tboard'] = g.daq.boards.FindObject('Tboard').Clone(str(r).zfill(6)+'Tboard')
+     h[r]['TboardMean'] = h[r]['Tboard'].ProjectionX(str(r).zfill(6)+'TboardMean')
+     h[r]['TboardMean'].Reset()
+     for nx in range(1,h[r]['Tboard'].GetNbinsX()+1):
+        tmp = h[r]['Tboard'].ProjectionY('tmp',nx,nx)
+        h[r]['TboardMean'].SetBinContent(nx,tmp.GetMean())
+        h[r]['TboardMean'].SetBinError(nx,tmp.GetRMS())
+     h[r]['TboardMean'].SetMarkerStyle(20)
+     h[r]['TboardMean'].Draw('P')
+     h['timeBoard'][r]=h[r]['TboardMean'].GetBinContent(58)
+     h['gTimeBoard'].SetPointX(n,stats[r]['NoPrev'][5]['date'])
+     h['gTimeBoard'].SetPointY(n,h['timeBoard'][r])
+     print('run',r,':',h['timeBoard'][r])
+  h['gTimeBoard'].Draw('same')
+  myPrint(h['TinEff'],'VetoBoardTime')
+  
+  mean = 0
+  N = 0
+  for r in stats:
+      tdiff = -1
+      if r in h['timeBoard']: tdiff = h['timeBoard'][r]
+      print("%i %5.2F+/-%5.2F  %5.2F"%(r,stats[r]['NoPrev'][5]['OR'][0]*1E6,stats[r]['NoPrev'][5]['OR'][1]*1E6,tdiff))
+      if r > 5180:
+         mean += stats[r]['NoPrev'][5]['OR'][0]
+         N+=1
+  mean=mean/N
+  chi2 = 0
+  N = 0
+  for r in stats:
+    if r > 5180:
+      chi2+=((stats[r]['NoPrev'][5]['OR'][0]-mean)/stats[r]['NoPrev'][5]['OR'][1])**2
+      N+=1
+  print(N,chi2)
+def triggerSettings(path="/mnt/hgfs/microDisk/SND@LHC/2022/"):
+  ft=open(path+'trigger_settings.csv')
+  L = ft.readlines()
+  keys = L[0].replace('\n','').split(',')
+  triggerSettings = {}
+  for l in range(1,len(L)):
+     val = L[l].replace('\n','').split(',')
+     triggerSettings[int(val[0])]={}
+     for i in range(1,len(keys)):
+        triggerSettings[int(val[0])][keys[i]]=val[i]
+  allruns = list(triggerSettings.keys())
+  allruns.sort()
+  for iv in range(1,len(keys) ):
+    prevVal = ''
+    for r in allruns:
+       if triggerSettings[r][keys[iv]] == prevVal: continue
+       if not prevVal == '':
+          print('change of settings',r,keys[iv],prevVal,triggerSettings[r][keys[iv]])
+       prevVal = triggerSettings[r][keys[iv]]
+"""
+change of settings 5031 veto_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 5031 veto_del off 3_ns
+
+change of settings 4453 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 4461 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 4517 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 4523 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 4545 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 4557 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 4576 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 4579 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 4630 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 4635 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 4642 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 4647 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 4692 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 4693 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 4772 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 4791 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 4824 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 4831 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 4841 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 4843 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+change of settings 4965 scifi_trig dtt_fdcr_t1t2 
+change of settings 5030 scifi_trig dtt_fdcr_t1t2 dtt_t1t2
+change of settings 5031 scifi_trig dtt_t1t2 dtt_fdcr_t1t2
+
+change of settings 4453 scifi_del 6_ns off
+change of settings 4461 scifi_del off 6_ns
+change of settings 4517 scifi_del 6_ns off
+change of settings 4523 scifi_del off 6_ns
+change of settings 4545 scifi_del 6_ns off
+change of settings 4557 scifi_del off 6_ns
+change of settings 4576 scifi_del 6_ns off
+change of settings 4579 scifi_del off 6_ns
+change of settings 4629 scifi_del 6_ns 3_ns
+change of settings 4630 scifi_del 3_ns off
+change of settings 4635 scifi_del off 3_ns
+change of settings 4642 scifi_del 3_ns off
+change of settings 4647 scifi_del off 3_ns
+change of settings 4692 scifi_del 3_ns off
+change of settings 4693 scifi_del off 3_ns
+change of settings 4772 scifi_del 3_ns off
+change of settings 4791 scifi_del off 3_ns
+change of settings 4824 scifi_del 3_ns off
+change of settings 4831 scifi_del off 3_ns
+change of settings 4841 scifi_del 3_ns off
+change of settings 4843 scifi_del off 3_ns
+change of settings 4965 scifi_del 3_ns 
+change of settings 5028 scifi_del 3_ns 6_ns
+change of settings 5030 scifi_del 6_ns off
+change of settings 5031 scifi_del off 3_ns
+"""
 

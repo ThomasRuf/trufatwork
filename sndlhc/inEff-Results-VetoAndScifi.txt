@@ -241,6 +241,7 @@ scifi.GetSiPMPosition(1002044,A,B)
 -41.15<X<-15.65
 22.57<Y< ... 
 
+ut.readHists(h,'run005170_WithVetoEff.root')
 def execute():
      b=''
      noiseCuts = [1,5,10,12]
