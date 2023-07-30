@@ -1,3 +1,208 @@
+import os
+runs=[5389,5408,5125,5396,5350,5399,5263,5377,5262,5259,5257,5253,   # runs with prevTime  --> 6001 
+5120,5154,5170,5180,5236,5239,5036,5044,5056,
+                        4572,4595,4617,4626,4612,4639,4661,4649,4724,4744,4758,4769,4815,4958,4964,4971,4976,4980,4990,5000,5005,5013,5024,5059,5094,5109]
+runs.sort()
+done=[]
+>>> len(runs)
+47
+
+cp shipLHC/scripts/Scifi_monitoring.py $SNDSW_ROOT/shipLHC/scripts/Scifi_monitoring.py
+
+done =[4572, 4595, 4612, 4617, 4626, 5094, # no postscale  5109 was wrong
+                                               ]
+for r in runs[1:8]:
+    if r in done: continue
+    os.system("python MY-run_Monitoring.py -r "+str(r)+" -p /eos/experiment/sndlhc/convertedData/physics/2022/ --parallel 10 --batch -b 1000000")
+for r in runs[8:16]:
+    if r in done: continue
+    os.system("python MY-run_Monitoring.py -r "+str(r)+" -p /eos/experiment/sndlhc/convertedData/physics/2022/ --parallel 10 --batch -b 1000000  --postScale 2")
+for r in runs[16:24]:
+    if r in done: continue
+    os.system("python MY-run_Monitoring.py -r "+str(r)+" -p /eos/experiment/sndlhc/convertedData/physics/2022/ --parallel 10 --batch -b 1000000 --ScifiResUnbiased 1 --postScale 2")
+for r in runs[24:32]:
+    if r in done: continue
+    os.system("python MY-run_Monitoring.py -r "+str(r)+" -p /eos/experiment/sndlhc/convertedData/physics/2022/ --parallel 10 --batch -b 1000000 --ScifiResUnbiased 1 --postScale 2")
+for r in runs[32:40]:
+    if r in done: continue
+    os.system("python MY-run_Monitoring.py -r "+str(r)+" -p /eos/experiment/sndlhc/convertedData/physics/2022/ --parallel 10 --batch -b 1000000 --ScifiResUnbiased 1 --postScale 2")
+for r in runs[40:48]:
+    if r in done: continue
+    os.system("python MY-run_Monitoring.py -r "+str(r)+" -p /eos/experiment/sndlhc/convertedData/physics/2022/ --parallel 10 --batch -b 1000000  --postScale 2")
+
+sndbuild-cc7:      
+sndbuild-cc8:           
+sndlhc-ubuntu2004-16:   
+ship-ubuntu-1710-16:    
+ship-ubuntu-1710-32:    
+ship-ubuntu-1710-64:    
+
+
+run 6568:
+eventTree = ROOT.TChain('rawConv')
+for r in range(269):
+  eventTree.AddFile("root://eospublic.cern.ch//eos/experiment/sndlhc/convertedData/physics/2023/run_006568/sndsw_raw-"+str(r).zfill(4)+".root")
+
+def checkOtherTriggers(event,deadTime = 100,debug=False):
+      T0 = event.EventHeader.GetEventTime()
+      N = event.EventHeader.GetEventNumber()
+      Nprev = 1
+      rc = event.GetEvent(N-Nprev)
+      dt = T0 - event.EventHeader.GetEventTime()
+      otherFastTrigger = False
+      otherAdvTrigger = False
+      tightNoiseFilter = False
+      while dt < deadTime:
+         otherFastTrigger = False
+         for x in event.EventHeader.GetFastNoiseFilters():
+             if debug: print('fast:', x.first, x.second )
+             if x.second and not x.first == 'Veto_Total': otherFastTrigger = True
+         otherAdvTrigger = False
+         for x in event.EventHeader.GetAdvNoiseFilters():
+             if debug: print('adv:', x.first, x.second )
+             if x.second and not x.first == 'VETO_Planes': otherAdvTrigger = True
+         if debug: print('pre event ',Nprev,dt,otherFastTrigger,otherAdvTrigger)
+         if otherFastTrigger and otherAdvTrigger:
+             rc = event.GetEvent(N)
+             return otherFastTrigger, otherAdvTrigger, tightNoiseFilter, Nprev, dt
+         Nprev+=1
+         rc = event.GetEvent(N-Nprev)
+         dt = T0 - event.EventHeader.GetEventTime()
+      Nprev = 1
+      rc = event.GetEvent(N-Nprev)
+      dt = T0 - event.EventHeader.GetEventTime()
+      while dt < deadTime:
+         hits = {1:0,0:0}
+         for aHit in event.Digi_MuFilterHits:
+            Minfo = MuFilter_PlaneBars(aHit.GetDetectorID())
+            s,l,bar = Minfo['station'],Minfo['plane'],Minfo['bar']
+            if s>1: continue
+            allChannels = aHit.GetAllSignals(False,False)
+            hits[l]+=len(allChannels)
+         noiseFilter0 = (hits[0]+hits[1])>4.5
+         noiseFilter1 = hits[0]>0 and hits[1]>0
+         if debug: print('veto hits:',hits)
+         if noiseFilter0 and noiseFilter1: 
+            tightNoiseFilter = True
+            rc = event.GetEvent(N)
+            return otherFastTrigger, otherAdvTrigger, tightNoiseFilter, Nprev-1, dt
+         Nprev+=1
+         rc = event.GetEvent(N-Nprev)
+         dt = T0 - event.EventHeader.GetEventTime()
+      if Nprev>1: 
+            rc = event.GetEvent(N-Nprev+1)
+            dt = T0 - event.EventHeader.GetEventTime()
+      rc = event.GetEvent(N)
+      return otherFastTrigger, otherAdvTrigger, tightNoiseFilter, Nprev-1, dt
+
+for e in eventList:
+   rc = eventTree.GetEvent(e)
+   otherFastTrigger, otherAdvTrigger, tightNoiseFilter, Nprev, dt = checkOtherTriggers(eventTree,debug=False)
+   if not (otherFastTrigger and otherAdvTrigger) and not tightNoiseFilter: print(e,Nprev,dt,otherFastTrigger, otherAdvTrigger, tightNoiseFilter)
+
+59979882 15 96 False False False
+9009331 0 124 False False False
+39965037 10 48 False False False
+
+80940063  	prev event 1 hit negative, but preprev event with track and firing 31 channels
+135076630 	-76cc busy event
+54796983	lot of VETO hits in prev events
+82491336	prev prev event would have also detected deadtime
+29319558	many prev events
+190674738	-12cc track
+164166853	-12cc lot of activity
+110903530	lot of VETO hits in prev events
+165730145	-88cl track
+138913779	-92cl track and lot of activity
+31946093 	many prev events
+
+58865130 
+166291014
+166317373
+112650840
+139985443
+193890841
+59979882	triggered by Veto only 16 132   59979860 lot of activity, many events with 1 veto hit, only few clock cycles apart.
+59985004
+194609606
+87431734	triggered by Veto only 13 27332  87431734-12 veto activity distributed over many events, 56 cc
+195143627
+222305673
+141696799
+9009331  	triggered by Veto only 1 124  no explanation, prev event -124cc and not firing same veto bars
+9143562
+61974012
+223317556
+10327353
+251169421
+11690690
+172123476
+12072601
+38018690
+199055605
+252957715
+199633082 
+38716574
+
+92906394
+66206530
+254412022
+66545860
+39965037
+40083363
+228181507
+40635688
+41015870
+15282794
+148894913
+
+69591100
+123751354
+150375469
+258614230
+43874965
+97486786
+204991147
+70824014
+44165988
+70962724
+124773995	triggered by Veto only 124773995 4 109276
+44344939
+205457398 
+
+
+71609174
+179238341
+232914661
+71748182
+99033184
+45818396
+233733102
+233887839
+46345062
+181177809
+127338080
+181429000
+73835121
+208455196
+101360385
+47965018
+101465855
+155363084
+236522922
+102142133
+76105830
+183989990
+49714605
+130222135
+24529998
+24942173
+185290175
+77908552
+51298833
+212475874
+212831552
+
 scifi.GetSiPMPosition(1000000,A,B)
 >>> (A[1]+B[1])/2
 14.964849051657234

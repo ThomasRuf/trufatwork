@@ -3,16 +3,34 @@ import os
 import time,calendar
 import rootUtils as ut
 h={}
-#     5399,5396,5262,5253,5408,5389,5377,5263,5259,5350,5257,5125 now running with proper xy distr, hopefully
-# running on cs8     [5171,5159,5157,5154,5152]:finished
-# running on 2004-16 [5133,5132,5130,5122]: finished
-
-runs=[5389,5408,5125,5396,5350,5399,5263,5377,5262,5259,5257,5253,5171,5159,5157,5154,5133,5132,5130,5122,5152,   # runs with prevTime  --> 6001 
+year = 2023
+runs = {}
+if year == 2022:
+ runs = [5389,5408,5125,5396,5350,5399,5263,5377,5262,5259,5257,5253,5171,5159,5157,5154,5133,5132,5130,5122,5152,   # runs with prevTime  --> 6001 
 5059,5120,5154,5170,5180,5236,5239,5036,5044,5056,
                         4572,4595,4617,4626,4612,4639,4661,4649,4724,4744,4758,4769,4815,4958,4964,4971,4976,4980,4990,5000,5005,5013,5024,5059,5094,5109]
+else:
+ runs =[6018,6042,6069,6121,6208,6215,6223,6226,6233,6264,6268,6273,6568,6574,6577,6593,6590,6596,6598,6605,6610,6622]
+
 runs.sort()
 
+# right side of plane 1 off: 5180, 5236, 5239, 5241
 region = [22,92,22,83] # region = [21,91,34,89] # value from neutrino analysis?
+
+#  0------1
+#  --------
+#  2------3
+border = {0: {0:[-6.45325, 56.47542+3],1:[-48.45232, 56.19794+3],2:[-6.21519, 20.44299-3],3:[-48.21427, 20.16551-3]},
+          1: {0:[-6.41871, 54.27478+3],1:[-48.41778, 53.99731+3],2:[-6.18065, 18.24235-3],3:[-48.17973, 17.96487-3]}} 
+
+for sRef in range(2):
+   h['TlineTop'+str(sRef)] = ROOT.TLine(border[sRef][0][0],border[sRef][0][1],border[sRef][1][0],border[sRef][1][1])
+   h['TlineBot'+str(sRef)] = ROOT.TLine(border[sRef][2][0],border[sRef][2][1],border[sRef][3][0],border[sRef][3][1])
+   h['TlineLef'+str(sRef)] = ROOT.TLine(border[sRef][2][0],border[sRef][2][1],border[sRef][0][0],border[sRef][0][1])
+   h['TlineRig'+str(sRef)] = ROOT.TLine(border[sRef][3][0],border[sRef][3][1],border[sRef][1][0],border[sRef][1][1])
+   for x in ['TlineTop'+str(sRef),'TlineBot'+str(sRef),'TlineLef'+str(sRef),'TlineRig'+str(sRef)]:
+      h[x].SetLineWidth(2)
+      h[x].SetLineColor(ROOT.kGreen)
 
 ''' list of events with no prev and no veto hits:
 5408 4432851 mu=52
@@ -108,9 +126,9 @@ import subprocess,time
 runsWithEventDisplays = [5125,5253, 5257, 5259, 5262, 5263, 5350, 5377, 5389, 5396, 5399, 5408]
 
 def updateFigures():
-   path = "/mnt/hgfs/microDisk/SND@LHC/Analysis Notes/VetoInefficiency/"
+   path = '/mnt/hgfs/microDisk/SND@LHC/Analysis Notes/VetoInefficiency - 2023/'
    listOfFigures = []
-   for X in [path+"introduction.tex",path+"eventPictures.tex"]:
+   for X in [path+"introduction.tex"]:
     t = open(X)
     for l in t.readlines():
       if l.find('figs/')<0: continue
@@ -122,7 +140,9 @@ def updateFigures():
     t.close()
    for p in listOfFigures:
      if not p.find('eventsRun')<0: continue
-     print("%30s :  %25s, %25s"%(p,time.ctime(os.path.getmtime(p)), time.ctime(os.path.getmtime(path+"figs/"+p)) ) )
+     if os.path.isfile(path+"figs/"+p):
+       print("%30s :  %25s, %25s"%(p,time.ctime(os.path.getmtime(p)), time.ctime(os.path.getmtime(path+"figs/"+p)) ) )
+     os.system('cp '+p+' '+path.replace(' ','\ ')+'figs/')
    for p in listOfFigures:
       if p.find('-event')>0: os.system('cp '+p+' '+path.replace(' ','\ ')+'figs/')
 
@@ -137,6 +157,14 @@ def printInEffasFuncOfDate(noise=5,sel='NoPrev',p=0.9):
       NinEff = inEff*Nr
       cL = lowUpLimit(p,NinEff)
       print("%i %s  %5.2F+/- [%5.2F,%5.2F] 1E-6  %i"%(r,time.ctime(t),cL[0]/Nr*1E6,cL[1]/Nr*1E6,einEff*1E6,NinEff))
+
+def printNrOFEvents(runs,i='OR',noiseCut=5,c='NoPrev',p=0.9):
+    for r in runs:
+              inEff  = stats[r][c][noiseCut][i][0]
+              Nr     = stats[r][c][noiseCut]['Ntot_r']
+              NinEff = inEff*Nr
+              cL = lowUpLimit(p,NinEff)
+              print(r,':',NinEff,stats[r][c][noiseCut][i],cL[0]/Nr,cL[1]/Nr)
 
 CB = {}
 def makeEventDisplays():
@@ -243,6 +271,13 @@ def sumOfhistos(runs,newRun=6001):
    for r in runs:
        cmd += " noBackward/allHistos-run00XXXX.root".replace('XXXX',str(r))
    os.system(cmd)
+def sumOfhistos2(runs,newRun=6002):
+   cmd = "hadd -f allHistos-run"+str(newRun).zfill(6)+'.root '
+   for r in runs:
+       if r==5170: continue
+       if r<5125: continue
+       cmd += " noBackward/allHistos-run00XXXX.root".replace('XXXX',str(r))
+   os.system(cmd)
    
 def printoutEvdisplay(r):
    eventTree.GetEvent(r)
@@ -285,54 +320,55 @@ def getRateOfVetoOnly():
    print(eventTree.GetEntries(),N_vetOnlyEvents,N_vetOnlyEvents/eventTree.GetEntries(),timeD,N_vetOnlyEvents/timeD)
    print(eventTree.GetEntries(),N_vetoEvents,N_vetoEvents/eventTree.GetEntries(),timeD,N_vetoEvents/timeD)
 
-def timeDiffPrevNextEvent(r=6001):
-   ut.readHists(h,'noBackward/allHistos-run00'+str(r)+'.root')
+def timeDiffPrevNextEvent(r=6001,path='noBackward/'):
+   if not r in h: h[r]={}
+   ut.readHists(h[r],path+'allHistos-run00'+str(r)+'.root')
    ut.bookCanvas(h,'TtimeDiff','',900,600,1,1)
    colors = {'timeDiffPrev_5':[ROOT.kMagenta,22],'XtimeDiffPrev_5':[ROOT.kRed,23]}
    for c in ['timeDiffPrev_5','XtimeDiffPrev_5']:
-     h[c+'norm'] = h[c].Clone(c+'norm')
-     h[c+'norm'].Scale(1./h[c].GetSumOfWeights())
-     h[c+'norm'].SetStats(0)
-     h[c+'norm'].SetMinimum(0)
-     h[c+'norm'].SetMarkerColor(colors[c][0])
-     h[c+'norm'].SetMarkerStyle(colors[c][1])
-     h[c+'norm'].SetTitle(';clock cycles; arb. units')
-   h['timeDiffPrev_5norm'].Scale(10)
-   h['XtimeDiffPrev_5norm'].Draw()
-   h['timeDiffPrev_5norm'].Draw('same')
-   h['ltimeDiffPrev']=ROOT.TLegend(0.42,0.66,0.88,0.88)
-   X = h['ltimeDiffPrev'].AddEntry(h['timeDiffPrev_5norm'],'all events',"LP")
+     h[r][c+'norm'] = h[r][c].Clone(c+'norm')
+     h[r][c+'norm'].Scale(1./h[r][c].GetSumOfWeights())
+     h[r][c+'norm'].SetStats(0)
+     h[r][c+'norm'].SetMinimum(0)
+     h[r][c+'norm'].SetMarkerColor(colors[c][0])
+     h[r][c+'norm'].SetMarkerStyle(colors[c][1])
+     h[r][c+'norm'].SetTitle(';clock cycles; arb. units')
+   h[r]['timeDiffPrev_5norm'].Scale(10)
+   h[r]['XtimeDiffPrev_5norm'].Draw()
+   h[r]['timeDiffPrev_5norm'].Draw('same')
+   h[r]['ltimeDiffPrev']=ROOT.TLegend(0.42,0.66,0.88,0.88)
+   X = h[r]['ltimeDiffPrev'].AddEntry(h[r]['timeDiffPrev_5norm'],'all events',"LP")
    X.SetTextColor(colors['timeDiffPrev_5'][0])
-   X = h['ltimeDiffPrev'].AddEntry(h['XtimeDiffPrev_5norm'],'events with inefficient Veto',"LP")
+   X = h[r]['ltimeDiffPrev'].AddEntry(h[r]['XtimeDiffPrev_5norm'],'events with inefficient Veto',"LP")
    X.SetTextColor(colors['XtimeDiffPrev_5'][0])
-   h['ltimeDiffPrev'].Draw()
+   h[r]['ltimeDiffPrev'].Draw()
    myPrint(h['TtimeDiff'],'timeDiffPrev_'+str(r))
 
 from rootpyPickler import Unpickler
 from rootpyPickler import Pickler
-fg  = ROOT.TFile.Open(os.environ['EOSSHIP']+"/eos/experiment/sndlhc/convertedData/physics/2022/RunInfodict.root")
+fg  = ROOT.TFile.Open(os.environ['EOSSHIP']+"/eos/experiment/sndlhc/convertedData/physics/"+str(year)+"/RunInfodict.root")
 pkl = Unpickler(fg)
 runInfo = pkl.load('runInfo')
 fg.Close()
 
-for rspecial in [6000,6001,6018]:
+for rspecial in [1000,1001,1002,1003,1013,1023,6000,6001,6002]:
  runInfo[rspecial]={}
  runInfo[rspecial]['muAv']={}
  runInfo[rspecial]['muAv']['']=50
- runInfo[rspecial]['StartTime']=runInfo[5125]['StartTime']
+ runInfo[rspecial]['StartTime']=0
 
 def myPrint(tc,outName):
    tc.Update()
    for t in ['.root','.png','.pdf']:
       tc.Print(outName+t)
 
-def makePlotsForNote(r=5125):
+def makePlotsForNote(r=5125,xname='noBackward/allHistos-run00XXXX.root'):
 # 5125 after fixing time delay and noise filter
 # 5120 after fixing time delay but still without veto in noise filter
 # 4626 with doT1 6ns
 # 4744 with doT1 3ns
 
-     vetoEfficiency(runs=[r],v='',name='noBackward/allHistos-run00XXXX.root',noiseCuts = [1,5,10,12])
+     vetoEfficiency(runs=[r],v='',name=xname,noiseCuts = [1,5,10,12])
      hr = h[r]['']
      ut.bookCanvas(hr,'ThitVeto','',900,600,1,1)
      tc = hr['ThitVeto'].cd()
@@ -423,7 +459,9 @@ def makePlotsForNote(r=5125):
           hr['eff'+c+str(nc)+'PosVeto_'+p+'X'].SetTitle('')
           hr['eff'+c+str(nc)+'PosVeto_'+p+'X'].SetLineColor(Marker[p][1])
        hr['TPosVeto'].SetLogy(1)
-       hr['eff'+c+str(nc)+'PosVeto_11Y'].SetMaximum(4E-4)
+       nmax = [hr['eff'+c+str(nc)+'PosVeto_0Y'].GetMaximum(),hr['eff'+c+str(nc)+'PosVeto_1Y'].GetMaximum()]
+       nmax.reverse()
+       hr['eff'+c+str(nc)+'PosVeto_11Y'].SetMaximum(1.1*nmax[0])
        hr['eff'+c+str(nc)+'PosVeto_11Y'].Draw()
        hr['eff'+c+str(nc)+'PosVeto_0Y'].Draw('same')
        hr['eff'+c+str(nc)+'PosVeto_1Y'].Draw('same')
@@ -438,7 +476,9 @@ def makePlotsForNote(r=5125):
        myPrint(hr['TPosVeto'],'VetoInEffvsY_'+str(nc)+'_'+str(r))
 #
        hr['TPosVeto'].SetLogy(0)
-       hr['eff'+c+str(nc)+'PosVeto_0X'].SetMaximum(7E-5)
+       nmax = [hr['eff'+c+str(nc)+'PosVeto_0X'].GetMaximum(),hr['eff'+c+str(nc)+'PosVeto_1X'].GetMaximum()]
+       nmax.reverse()
+       hr['eff'+c+str(nc)+'PosVeto_0X'].SetMaximum(1.1*nmax[0])
        hr['eff'+c+str(nc)+'PosVeto_0X'].Draw()
        hr['eff'+c+str(nc)+'PosVeto_1X'].Draw('same')
        h['leffX']=ROOT.TLegend(0.71,0.59,0.88,0.88)
@@ -471,6 +511,8 @@ def makePlotsForNote(r=5125):
            hr['tline'+l].SetLineColor(ROOT.kRed)
            hr['tline'+l].SetLineWidth(2)
            hr['tline'+l].Draw('same')
+       for x in ['TlineTop'+str(p),'TlineBot'+str(p),'TlineLef'+str(p),'TlineRig'+str(p)]: h[x].Draw('same')
+           
        myPrint(hr['TPosVeto'],'NoHitPosVeto_'+str(nc)+str(p)+'_'+str(r))
      flatex = open('table-'+str(r)+'.tex','w')
      for c in ['all','','NoPrev']:
@@ -478,18 +520,26 @@ def makePlotsForNote(r=5125):
         eprev = int(ROOT.TMath.Log10(prev)-1)
         # if c=='': line = "\\multicolumn{4}{|c|}{With previous event, $%5.2F \\times 10^{%i}$ of the events}\\\\ \n"%(prev/10**eprev,eprev)
         if c=='': line = "\\multicolumn{4}{|c|}{With previous event, $%5.2F%% of the events}\\\\ \n"%(prev*100)
-        elif c=='':    line = "\\multicolumn{4}{|c|}{}\\\\ \n"
+        elif c=='all':    line = "\\multicolumn{4}{|c|}{}\\\\ \n"
         else:    line = "\\multicolumn{4}{|c|}{No previous event}\\\\ \n"
         flatex.write(line)
         for noiseCut in stats[r][c]:
            val = stats[r][c][noiseCut]
        # $N_{hits}< & no Veto 0 & no Veto 1 & no Veto 0 and no Veto 1  
            e={}
-           for i in [1,3,7]:
-              e[i]=int(ROOT.TMath.Log10(val[i])-1)
-           line = "$%i$ & $(%5.2F \pm %5.2F)\\times 10^{%i}$ &  $(%5.2F \pm %5.2F)\\times 10^{%i}$ &  $(%5.2F \pm %5.2F)\\times 10^{%i}$ \\\\ \n"%(noiseCut,
-              val['plane0'][0]/10**e[1],val['plane0'][1]/10**e[1],e[1],val['plane1'][0]/10**e[3],val['plane1'][1]/10**e[3],e[3],
-              val['OR'][0]/10**e[7],val['OR'][1]/10**e[7],e[7])
+           confInterval = {}
+           for i in ['plane0','plane1','OR']:
+              e[i] = -6
+              if val['OR'][0]>0: e[i]=int(ROOT.TMath.Log10(val['OR'][0])-1)
+              inEff  = stats[r][c][noiseCut][i][0]
+              Nr     = stats[r][c][noiseCut]['Ntot_r']
+              NinEff = inEff*Nr
+              cL = lowUpLimit(0.9,NinEff)
+              confInterval[i] = [cL[0]/Nr,cL[1]/Nr]
+
+           line = "$%i$ & $(%5.2F \pm %5.2F)\\times 10^{%i}$ &  $(%5.2F \pm %5.2F)\\times 10^{%i}$ &  $(%5.2F [-%5.2F, +%5.2F])\\times 10^{%i}$ \\\\ \n"%(noiseCut,
+              val['plane0'][0]/10**e['plane0'],val['plane0'][1]/10**e['plane0'],e['plane0'],val['plane1'][0]/10**e['plane1'],val['plane1'][1]/10**e['plane1'],e['plane1'],
+              val['OR'][0]/10**e['OR'],confInterval['OR'][0]/10**e['OR'],confInterval['OR'][1]/10**e['OR'],e['OR'])
            flatex.write(line)
      flatex.write('--- single plane ineff\n')
      for c in ['all','','NoPrev']:
@@ -499,10 +549,11 @@ def makePlotsForNote(r=5125):
        # $N_{hits}< & no Veto 0 & no Veto 1 & no Veto 0 and no Veto 1  
            e={}
            for i in ['plane10','plane01']:
-              e[i]=int(ROOT.TMath.Log10(val[i][0])-1)
+              e[i] = -7
+              if val[i][0]>0: e[i]=int(ROOT.TMath.Log10(val[i][0])-1)
            line = "$%i$ & $(%5.2F \pm %5.2F)\\times 10^{%i}$ &  $(%5.2F \pm %5.2F)\\times 10^{%i}$ \\\\ \n"%(noiseCut,
               val['plane10'][0]/10**e['plane10'],val['plane10'][1]/10**e['plane10'],e['plane10'],
-              val['plane11'][0]/10**e['plane11'],val['plane11'][1]/10**e['plane11'],e['plane11'])
+              val['plane01'][0]/10**e['plane01'],val['plane01'][1]/10**e['plane01'],e['plane01'])
            flatex.write(line)
      flatex.close()
 
@@ -548,8 +599,8 @@ def checkPrevEvent(evtlist=[115837036,53699368,23022923,55077814,39311734,617081
 
 stats = {}
 timeRange = {}
-def printVetoEff(noiseCut=[5],sel='NoPrev',prob=0.9):
- vetoEfficiency(runs,v='',name='noBackward/allHistos-run00XXXX.root',noiseCuts = noiseCut)
+def printVetoEff(noiseCut=[5],n='noBackward/allHistos-run00XXXX.root',sel='NoPrev',prob=0.9):
+ vetoEfficiency(runs,v='',name=n,noiseCuts = noiseCut)
  for nc in noiseCut:
   for r in stats:
      Nr = stats[r][sel][nc]['Ntot_r']
@@ -580,14 +631,23 @@ def printVetoEff(noiseCut=[5],sel='NoPrev',prob=0.9):
       k=0
       if p=='p0': k = 2
       if p=='p1': k = 4
-      h[evolnc].SetPoint(n,t,timeRange[t][k])
-      h[evolnc].SetPointError(n,500,500,timeRange[t][k+1][0],timeRange[t][k+1][1])
+      if p=='':
+         h[evolnc].SetPoint(n,t,timeRange[t][k+1][1])
+         dy = timeRange[t][k+1][1] - timeRange[t][k]
+         h[evolnc].SetPointError(n,500,500,timeRange[t][k+1][0]+dy,0)
+      else:
+         h[evolnc].SetPoint(n,t,timeRange[t][k])
+         h[evolnc].SetPointError(n,500,500,timeRange[t][k+1][0],timeRange[t][k+1][1])
       n+=1
   if not 'inEff' in h:
    # delta = (tend-tstart)*0.025
    # ut.bookHist(h,'inEff',';time ; inEff',300,tstart-delta,tend+delta)
-   dateA = '07-20,2022-0'
-   dateB = '12-01,2022-0'
+   if year == 2022:
+      dateA = '07-20,2022-0'
+      dateB = '12-01,2022-0'
+   if year == 2023:
+      dateA = '05-10,2023-0'
+      dateB = '07-20,2023-0'
    time_objA = time.strptime(dateA,'%m-%d,%Y-%H')
    time_objB = time.strptime(dateB,'%m-%d,%Y-%H')
    TA = calendar.timegm(time_objA)
@@ -600,20 +660,22 @@ def printVetoEff(noiseCut=[5],sel='NoPrev',prob=0.9):
    h['inEff'].GetXaxis().SetTimeOffset(0,'gmt')
    h['inEff'].GetXaxis().SetNdivisions(520)
    h['inEff'].GetYaxis().SetMaxDigits(2)
-   h['inEff'].SetMaximum(1E-2)
-   h['inEff'].SetMinimum(1E-7)
+   if year == 2023: h['inEff'].SetMaximum(5E-4)
+   if year == 2022: h['inEff'].SetMaximum(1E-2)
+   h['inEff'].SetMinimum(1E-8)
    h['inEff'].SetStats(0)
   h['inEff'].Draw()
   for p in Marker:
     evolnc = p+'evol'+str(nc)
     h[evolnc].Draw('same')
     h[evolnc].Draw('sameP')
-  h['levol']=ROOT.TLegend(0.32,0.28,0.49,0.57)
+  if year == 2022:  h['levol']=ROOT.TLegend(0.32,0.28,0.49,0.57)
+  if year == 2023:  h['levol']=ROOT.TLegend(0.46,0.43,0.69,0.65)
   X = h['levol'].AddEntry(h['p0evol'+str(nc)],'plane 0 ',"LP")
   X.SetTextColor(h['p0evol'+str(nc)].GetMarkerColor())
   X = h['levol'].AddEntry(h['p1evol'+str(nc)],'plane 1 ',"LP")
   X.SetTextColor(h['p1evol'+str(nc)].GetMarkerColor())
-  X = h['levol'].AddEntry(h['evol'+str(nc)],'detector ',"LP")
+  X = h['levol'].AddEntry(h['evol'+str(nc)],'detector UL 90%',"LP")
   X.SetTextColor(h['evol'+str(nc)].GetMarkerColor())
   h['levol'].Draw()
   myPrint(h['TinEff'],'VetoInEffOverTime_'+str(nc))
@@ -635,7 +697,8 @@ def vetoEfficiency(runs,v='',name='noBackward/allHistos-run00XXXX.root',noiseCut
          print(fname +'not found')
          continue
      print('*** analyzing '+fname)
-     wa = ['scaler','hitVeto_X','hitVeto_Y','deltaT','X/Y','timeDiffPrev','XStimeDiffPrev']
+     wa = ['scaler','hitVeto_X','hitVeto_Y','deltaT','X/Y',
+           'hitVeto_0','hitVeto_1','hitVeto_01']
      for noiseCut in [1,5,10,12]:
         wa.append('timeDiffPrev_'+str(noiseCut))
         wa.append('XtimeDiffPrev_'+str(noiseCut))
@@ -745,7 +808,9 @@ X_111   not P0 and not P1 at position P1
      print('%5.2F%% of events with a Scifi track have a prev event '%(scifiTrackPrevEvent))
      if r==5125: muAv = 43.4
      elif r==5170: muAv = 48.2
-     elif not 'muAv' in runInfo[r]: print('mu average missing',r)
+     elif not 'muAv' in runInfo[r]:
+        muAv = 0
+        print('mu average missing',r)
      else: muAv = runInfo[r]['muAv']['']
      print('mu = %5.2F'%(muAv))
   if len(runs)>10:

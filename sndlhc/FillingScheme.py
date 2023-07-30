@@ -21,7 +21,7 @@ fromElog = {4361:7902,4362: 7921, 4363: 7921, 4364: 7921, 4365: 7921, 4366: 7922
 # run 4986 fill 8234 Acc Message :  - 300b fill for VELO insertion - issue with MKI - B2, we ramp with 218b 
 
 
-emulsionReplacements = {0:1,4573:2,4859:3,5172:4}   # first runs with new emulsion
+emulsionReplacements = {0:1,4573:2,4859:3,5172:4,5485:5,6446:6}   # first runs with new emulsion
 
 class fillingScheme():
 
@@ -147,12 +147,13 @@ class fillingScheme():
          print('fill number =',fillNumber )
        except:
          fillNumber = False
+       if runNumber == 6296 : fillNumber = 8897  # LHC mistake, twice the same fill number
        return fillNumber
 
-   def getLumiAtIP1(self,fillnr=None,fromnxcals=False):
+   def getLumiAtIP1(self,fillnr=None,fromnxcals=False, fromAtlas=False):
      Y = "2022"
      if fillnr>8500: Y = "2023"
-     if not fromnxcals:
+     if not fromnxcals and not fromAtlas:
        try:
           with urlopen('https://lpc.web.cern.ch/cgi-bin/fillAnalysis.py?year='+Y+'&action=fillData&exp=ATLAS&fillnr='+str(fillnr)) as webpage:
               tmp = webpage.read().decode()
@@ -181,7 +182,8 @@ class fillingScheme():
             self.lumiAtIP1['lumiTime'].AddPoint(X[n][0]-t0,X[n][2])
        return 0
 
-     else:
+     elif fromnxcals:
+       # nxcals old:  /eos/experiment/sndlhc/nxcals_data/
        fileLoc = os.environ['EOSSHIP']+"/eos/experiment/sndlhc/nxcals_data/fill_"+str(fillnr).zfill(6)+".root"
        try:
            fill =  ROOT.TFile.Open(fileLoc)
@@ -211,7 +213,25 @@ class fillingScheme():
             self.lumiAtIP1['lumiTime'].AddPoint(e.unix_timestamp-t0,e.var)
 
        return 0
+       
+     elif fromAtlas:
+       fileLoc = os.environ['EOSSHIP']+"/eos/experiment/sndlhc/atlas_lumi/fill_"+str(fillnr).zfill(6)+".root"
+       try:
+           fill =  ROOT.TFile.Open(fileLoc)
+       except:
+           print('Fill information not found in atlas_lumi ',fillnr)
+           return -1
 
+       LtreeOff = fill.atlas_lumi
+       fillScheme = self.getNameOfFillingscheme(fillnr)
+
+       rc = LtreeOff.GetEvent(0)
+       self.lumiAtIP1 = {'startTime':LtreeOff.unix_timestamp,'lumiTime':ROOT.TGraph(),'fillingScheme':fillScheme}
+       t0 =  self.lumiAtIP1['startTime']
+       for e in LtreeOff:
+            self.lumiAtIP1['lumiTime'].AddPoint(e.unix_timestamp-t0,e.var)
+
+       return 0
    def drawLumi(self,runNumber):
        R = ROOT.TFile.Open(www+"offline/run"+str(runNumber).zfill(6)+".root")
        ROOT.gROOT.cd()
@@ -274,11 +294,12 @@ class fillingScheme():
 
        nbins = self.h['time'].GetNbinsX()
        endTime = self.h['time'].GetBinCenter(nbins)  # in seconds
-       rc = self.getLumiAtIP1(fillnr=options.fillNumbers,fromnxcals=True)
+       rc = self.getLumiAtIP1(fillnr=options.fillNumbers,fromnxcals=True,fromAtlas=False)
        if not rc<0:
-          if FS.lumiAtIP1['lumiTime'].GetN()<2: rc = -1
+          if FS.lumiAtIP1['lumiTime'].GetN()<2:
+              rc = self.getLumiAtIP1(fillnr=options.fillNumbers,fromnxcals=False,fromAtlas=True)
        if rc < 0:
-           rc = self.getLumiAtIP1(fillnr=options.fillNumbers,fromnxcals=False)
+           rc = self.getLumiAtIP1(fillnr=options.fillNumbers,fromnxcals=False,fromAtlas=False)
            if rc<0: return
 
        self.lumiAtlas = ROOT.TGraph()
@@ -1192,15 +1213,15 @@ class fillingScheme():
           lines.append("\\newline  ")
           lines.append("Run Summary for July - November 2022")
         else:
-          lines.append("{SND@LHC Run Summary March - May 2023}")
+          lines.append("{SND@LHC Run Summary March - July 2023}")
           lines.append("\date[Short Occasion] % (optional)")
-          lines.append("{ 25 May 2023}")
+          lines.append("{ 16 July 2023}")
           lines.append("\\begin{document}")
           lines.append("\\begin{frame}{}")
-          lines.append("25 May 2023")
+          lines.append("16 July 2023")
           lines.append("\\newline  ")
           lines.append("\\newline  ")
-          lines.append("Run Summary for March - May 2023")
+          lines.append("Run Summary for March - July 2023")
         nTXT = "$%5.2F\\times 10^9 $"%(N/1E9)
         lines.append("\\begin{itemize}")
         lines.append("\item total number of events: "+nTXT)
@@ -1265,8 +1286,9 @@ class fillingScheme():
 # runs with beam present measured
         RwL = []
         self.runsWithBeam()
-        for  r in R:
+        for  r in self.runs:
              withBeam = False
+             if r not in self.runInfo: continue
              if 'timeWtDS' in  self.runs[r]:
                  if self.runs[r]['timeWtDS']/self.runs[r]['time'] > 0.25: withBeam = True
              if self.runInfo[r]['lumiAtIP1withSNDLHC']>0 or withBeam: RwL.append(r)
@@ -1613,6 +1635,9 @@ class fillingScheme():
             zaxis.SetMaxDigits(3)
             zaxis.SetTitleOffset(1.4)
             pal = histo.FindObject('palette')
+            if not pal:
+                print('error',emulsionNr)
+                return
             pal.SetX1NDC(0.86)
             pal.SetX2NDC(0.89)
             tc.Update()
@@ -1797,7 +1822,8 @@ if __name__ == '__main__':
     parser.add_argument("-ip2", dest="withIP2", help="with IP2",default=True)
     parser.add_argument("-raw", dest="rawData", help="path to rawData",default="/eos/experiment/sndlhc/raw_data/physics/2023_tmp")   # before "/eos/experiment/sndlhc/raw_data/commissioning/TI18/data"
     parser.add_argument("-www", dest="www", help="path to offline folder",default=os.environ['EOSSHIP']+"/eos/experiment/sndlhc/www/")
-
+    parser.add_argument("-nMin", dest="nMin", help="min entries for a run",default=100000)
+    
     options = parser.parse_args()
     www = options.www
     if options.rawData.find('2022')>0 and options.path.find('TI18')>0: 
@@ -1842,7 +1868,7 @@ if __name__ == '__main__':
                     if y=='': continue
                     nev = int( y )
                     break
-                if nev < 100000: continue
+                if nev < options.nMin: continue
                 scale = 1
                 k = x.find('post scaled:')
                 if k>0: scale = int(x[k+12:])
